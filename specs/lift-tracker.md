@@ -50,7 +50,7 @@ One user: Noah. He's not a developer, so the app has to work without any setup o
 ### R4. Timers
 - R4.1 Rest preset buttons: 30s, 60s, 90s, 2:00, 3:00.
 - R4.2 Block timers defined in the program (`timer.ph` = phases `[label, seconds]`, `timer.rep` =
-  repeats). Examples: Day 1 power alternates "Box jumps 90s / Lateral bounds 90s" ×3, and bike sprints
+  repeats). Examples: Day 1 power alternates "Box jumps 90s / Lateral bounds 90s" ×4, and bike sprints
   run "Sprint 10s / Easy 50s" ×8.
 - R4.3 Timer bar fixed above the bottom nav: big countdown, current phase label, "Round x of y", Stop.
 - R4.4 Beep at each phase change (Web Audio, started from a tap). Keep the screen awake while running
@@ -99,4 +99,3 @@ One user: Noah. He's not a developer, so the app has to work without any setup o
 ## Open questions for Noah
 
 - Day 2–4 reps were filled in by Claude. Day 1 is his exact program. Confirm the others.
-- His last session note says "more box jump and lateral bound reps". Should Day 1 power go up from 3×3?

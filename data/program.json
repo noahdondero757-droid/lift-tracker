@@ -68,22 +68,22 @@
                 90
               ]
             ],
-            "rep": 3
+            "rep": 4
           },
           "items": [
             {
               "id": "boxjump",
               "n": "Box jumps",
               "t": "rounds",
-              "rounds": 3,
-              "note": "3×3 · step down"
+              "rounds": 4,
+              "note": "4×3 · step down"
             },
             {
               "id": "latbound",
               "n": "Lateral bounds",
               "t": "rounds",
-              "rounds": 3,
-              "note": "3×3 each side"
+              "rounds": 4,
+              "note": "4×3 each side"
             }
           ]
         },
