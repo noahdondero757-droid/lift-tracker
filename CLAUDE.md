@@ -1,0 +1,43 @@
+# Lift Tracker
+
+Phone-first workout tracker for Noah's 4-day athletic program: session logging, rest/block timers,
+automatic lift progression, history and progress charts. It's a PWA hosted on GitHub Pages and
+installed to his iPhone Home Screen.
+
+**The spec is `specs/lift-tracker.md`.** Build to it, and check work against its Definition of done.
+
+## Files
+
+- `specs/lift-tracker.md`: requirements (R1–R7), constraints, definition of done.
+- `data/program.json`: the program (days → blocks → items). This is Noah's training, so don't change
+  exercises, sets or reps unless he asks. Item `id`s are referenced by history, so never rename an id.
+- `data/history.json`: his existing logged sessions, to import on first run.
+- `reference/current-app.html`: the old all-in-one app this replaces. Use it for logic
+  (`target()`, `topSet()`, `nextDay()`, the timer, `newDraft()`) and for the visual style. It also
+  contains health/sleep features that are out of scope here.
+
+## Data shapes
+
+```
+program.days[] = { n, name, blocks[] }
+block = { label, timer?: { label, ph: [[phaseLabel, seconds], ...], rep? }, items[] }
+item  = { id, n (name), t: "sets"|"rounds"|"check", sets?, reps?, rounds?, note? }
+program.progression = { squat: 10, trapbar: 10, bench: 5 }   // lb added when all sets×reps hit
+
+workout = { id, date "YYYY-MM-DD", day 1-4, mins, note,
+            ex: { [itemId]: {sets:[{w,r}]} | {rounds, of} | {done:true} } }
+// w and r are strings as typed; parse with parseFloat. Empty r means the set wasn't done.
+```
+
+## Conventions
+
+- Plain HTML/CSS/JS with ES modules, no build step, unless the spec's constraint is revisited with Noah.
+- iOS Safari is the primary target. Test at 390×844, in light and dark mode.
+- Never use `alert/confirm/prompt`. Build confirmations into the page.
+- Timers compute remaining time from end timestamps, so they stay right after the phone sleeps.
+
+## Working with Noah
+
+- He's not a developer. Explain changes in plain words, give click-by-click steps for anything he has
+  to do (GitHub Pages, Add to Home Screen), and keep it short.
+- He likes direct, opinionated answers.

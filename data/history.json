@@ -1,0 +1,22 @@
+{
+  "exportedFrom": "https://claude.ai/artifact/Jt7dAKa91xLBfmHT4GHrTY",
+  "exportedAt": "2026-10-21",
+  "workouts": [
+    {
+      "id": "x90ixrnciw2v565msots",
+      "date": "2026-10-21",
+      "day": 1,
+      "mins": 46,
+      "note": "More box jump and later bound reps",
+      "ex": {
+        "wu_bike": {"done": true}, "wu_legfb": {"done": true}, "wu_leglat": {"done": true},
+        "wu_lunge": {"done": true}, "wu_pogo": {"done": true},
+        "boxjump": {"rounds": 3, "of": 3}, "latbound": {"rounds": 3, "of": 3},
+        "squat": {"sets": [{"w": "185", "r": "5"}, {"w": "185", "r": "5"}, {"w": "185", "r": "5"}, {"w": "185", "r": "5"}]},
+        "bss": {"sets": [{"w": "20", "r": "8"}, {"w": "20", "r": "8"}, {"w": "20", "r": ""}, {"w": "20", "r": ""}]},
+        "jumprope": {"rounds": 4, "of": 4}, "hlr": {"rounds": 4, "of": 4},
+        "bike": {"rounds": 4, "of": 8}
+      }
+    }
+  ]
+}

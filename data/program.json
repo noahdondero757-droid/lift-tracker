@@ -1,0 +1,561 @@
+{
+  "name": "4-Day Athletic Program",
+  "progression": {
+    "squat": 10,
+    "trapbar": 10,
+    "bench": 5
+  },
+  "days": [
+    {
+      "n": 1,
+      "name": "Lower Power",
+      "blocks": [
+        {
+          "label": "Warmup",
+          "timer": {
+            "label": "3 min bike",
+            "ph": [
+              [
+                "Bike",
+                180
+              ]
+            ]
+          },
+          "items": [
+            {
+              "id": "wu_bike",
+              "n": "Bike, easy pace",
+              "t": "check",
+              "note": "3 min"
+            },
+            {
+              "id": "wu_legfb",
+              "n": "Leg swings, front/back",
+              "t": "check",
+              "note": "15 each leg"
+            },
+            {
+              "id": "wu_leglat",
+              "n": "Leg swings, lateral",
+              "t": "check",
+              "note": "15 each leg"
+            },
+            {
+              "id": "wu_lunge",
+              "n": "Walking lunges",
+              "t": "check",
+              "note": "10 each leg"
+            },
+            {
+              "id": "wu_pogo",
+              "n": "Pogo hops",
+              "t": "check",
+              "note": "2×20"
+            }
+          ]
+        },
+        {
+          "label": "Power · alternate every 90 sec",
+          "timer": {
+            "label": "Alternating 90 sec clock",
+            "ph": [
+              [
+                "Box jumps",
+                90
+              ],
+              [
+                "Lateral bounds",
+                90
+              ]
+            ],
+            "rep": 3
+          },
+          "items": [
+            {
+              "id": "boxjump",
+              "n": "Box jumps",
+              "t": "rounds",
+              "rounds": 3,
+              "note": "3×3 · step down"
+            },
+            {
+              "id": "latbound",
+              "n": "Lateral bounds",
+              "t": "rounds",
+              "rounds": 3,
+              "note": "3×3 each side"
+            }
+          ]
+        },
+        {
+          "label": "Strength",
+          "timer": {
+            "label": "2 min rest",
+            "ph": [
+              [
+                "Rest",
+                120
+              ]
+            ]
+          },
+          "items": [
+            {
+              "id": "squat",
+              "n": "Barbell squat",
+              "t": "sets",
+              "sets": 4,
+              "reps": 5,
+              "note": "4×5 @ ~80% · 2 min rest"
+            }
+          ]
+        },
+        {
+          "label": "Rounds · 4 through, 60 sec rest",
+          "timer": {
+            "label": "60 sec rest",
+            "ph": [
+              [
+                "Rest",
+                60
+              ]
+            ]
+          },
+          "items": [
+            {
+              "id": "bss",
+              "n": "Bulgarian split squat",
+              "t": "sets",
+              "sets": 4,
+              "reps": 8,
+              "note": "4×8 each leg"
+            },
+            {
+              "id": "jumprope",
+              "n": "Jump rope",
+              "t": "rounds",
+              "rounds": 4,
+              "note": "4×30 sec"
+            },
+            {
+              "id": "hlr",
+              "n": "Hanging leg raises",
+              "t": "rounds",
+              "rounds": 4,
+              "note": "4×10"
+            }
+          ]
+        },
+        {
+          "label": "Conditioning",
+          "timer": {
+            "label": "10 on / 50 off ×8",
+            "ph": [
+              [
+                "Sprint",
+                10
+              ],
+              [
+                "Easy",
+                50
+              ]
+            ],
+            "rep": 8
+          },
+          "items": [
+            {
+              "id": "bike",
+              "n": "Bike sprints",
+              "t": "rounds",
+              "rounds": 8,
+              "note": "10 sec all-out · 50 sec easy"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "name": "Upper Push",
+      "blocks": [
+        {
+          "label": "Warmup",
+          "timer": {
+            "label": "2 min bike",
+            "ph": [
+              [
+                "Bike",
+                120
+              ]
+            ]
+          },
+          "items": [
+            {
+              "id": "wu_bike",
+              "n": "Bike, easy pace",
+              "t": "check",
+              "note": "2 min"
+            },
+            {
+              "id": "wu_pullapart",
+              "n": "Band pull-aparts",
+              "t": "check",
+              "note": "2×20"
+            },
+            {
+              "id": "wu_serratus",
+              "n": "Serratus punches",
+              "t": "check",
+              "note": "2×12"
+            }
+          ]
+        },
+        {
+          "label": "Main lift",
+          "items": [
+            {
+              "id": "bench",
+              "n": "Bench press",
+              "t": "sets",
+              "sets": 4,
+              "reps": 5,
+              "note": "4×5"
+            }
+          ]
+        },
+        {
+          "label": "Secondary",
+          "items": [
+            {
+              "id": "csrow",
+              "n": "Chest supported row",
+              "t": "sets",
+              "sets": 3,
+              "reps": 10,
+              "note": "3×10"
+            },
+            {
+              "id": "smith",
+              "n": "Smith press",
+              "t": "sets",
+              "sets": 3,
+              "reps": 8,
+              "note": "3×8"
+            },
+            {
+              "id": "facepull",
+              "n": "Face pulls",
+              "t": "sets",
+              "sets": 3,
+              "reps": 15,
+              "note": "3×15"
+            }
+          ]
+        },
+        {
+          "label": "Accessories",
+          "items": [
+            {
+              "id": "pushdown",
+              "n": "Tricep pushdown",
+              "t": "sets",
+              "sets": 3,
+              "reps": 12,
+              "note": "3×12"
+            },
+            {
+              "id": "latraise",
+              "n": "Cable lateral raise",
+              "t": "sets",
+              "sets": 3,
+              "reps": 15,
+              "note": "3×15 · 70–75°"
+            },
+            {
+              "id": "pallof",
+              "n": "Pallof press",
+              "t": "sets",
+              "sets": 3,
+              "reps": 10,
+              "note": "3×10 each side"
+            }
+          ]
+        },
+        {
+          "label": "Rehab",
+          "items": [
+            {
+              "id": "pullapart",
+              "n": "Band pull-aparts",
+              "t": "check",
+              "note": "2×20"
+            },
+            {
+              "id": "serratus",
+              "n": "Serratus punches",
+              "t": "check",
+              "note": "2×12"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "name": "Lower Strength + Carries",
+      "blocks": [
+        {
+          "label": "Warmup",
+          "timer": {
+            "label": "3 min bike",
+            "ph": [
+              [
+                "Bike",
+                180
+              ]
+            ]
+          },
+          "items": [
+            {
+              "id": "wu_bike",
+              "n": "Bike, easy pace",
+              "t": "check",
+              "note": "3 min"
+            },
+            {
+              "id": "wu_legfb",
+              "n": "Leg swings, front/back",
+              "t": "check",
+              "note": "15 each leg"
+            },
+            {
+              "id": "wu_bwsquat",
+              "n": "Bodyweight squats",
+              "t": "check",
+              "note": "2×10"
+            },
+            {
+              "id": "wu_hinge",
+              "n": "Hip hinges",
+              "t": "check",
+              "note": "2×10"
+            }
+          ]
+        },
+        {
+          "label": "Main lift",
+          "items": [
+            {
+              "id": "trapbar",
+              "n": "Trap bar deadlift",
+              "t": "sets",
+              "sets": 4,
+              "reps": 5,
+              "note": "4×5"
+            }
+          ]
+        },
+        {
+          "label": "Carries",
+          "timer": {
+            "label": "2 min clock ×3",
+            "ph": [
+              [
+                "Round",
+                120
+              ]
+            ],
+            "rep": 3
+          },
+          "items": [
+            {
+              "id": "farmer",
+              "n": "Farmer's carry",
+              "t": "rounds",
+              "rounds": 3,
+              "note": "40 m · heavy"
+            },
+            {
+              "id": "suitcase",
+              "n": "Suitcase carry",
+              "t": "rounds",
+              "rounds": 3,
+              "note": "20 m each side"
+            }
+          ]
+        },
+        {
+          "label": "Sled",
+          "items": [
+            {
+              "id": "sled",
+              "n": "Sled push / drag",
+              "t": "rounds",
+              "rounds": 4,
+              "note": "20 m each way · or lunges 10 each leg"
+            }
+          ]
+        },
+        {
+          "label": "Finisher",
+          "timer": {
+            "label": "30 on / 30 off",
+            "ph": [
+              [
+                "On",
+                30
+              ],
+              [
+                "Off",
+                30
+              ]
+            ],
+            "rep": 8
+          },
+          "items": [
+            {
+              "id": "finisher",
+              "n": "30-on / 30-off finisher",
+              "t": "rounds",
+              "rounds": 8,
+              "note": "Bike, row or sled · hard"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "name": "Upper Pull + Rotation",
+      "blocks": [
+        {
+          "label": "Warmup",
+          "timer": {
+            "label": "2 min row",
+            "ph": [
+              [
+                "Row",
+                120
+              ]
+            ]
+          },
+          "items": [
+            {
+              "id": "wu_row",
+              "n": "Row, easy pace",
+              "t": "check",
+              "note": "2 min"
+            },
+            {
+              "id": "wu_pullapart",
+              "n": "Band pull-aparts",
+              "t": "check",
+              "note": "2×20"
+            },
+            {
+              "id": "wu_deadbug",
+              "n": "Dead bugs",
+              "t": "check",
+              "note": "2×10 each side"
+            }
+          ]
+        },
+        {
+          "label": "Main pull",
+          "timer": {
+            "label": "90 sec rest",
+            "ph": [
+              [
+                "Rest",
+                90
+              ]
+            ]
+          },
+          "items": [
+            {
+              "id": "pullup",
+              "n": "Pull-ups",
+              "t": "sets",
+              "sets": 5,
+              "reps": 5,
+              "note": "5×5 · weight = added load"
+            },
+            {
+              "id": "cablerow",
+              "n": "Cable rows",
+              "t": "sets",
+              "sets": 5,
+              "reps": 8,
+              "note": "5×8"
+            }
+          ]
+        },
+        {
+          "label": "Rotation",
+          "items": [
+            {
+              "id": "medball",
+              "n": "Med ball rotational throws",
+              "t": "rounds",
+              "rounds": 3,
+              "note": "5 each side · max intent"
+            },
+            {
+              "id": "pallof",
+              "n": "Pallof press",
+              "t": "sets",
+              "sets": 3,
+              "reps": 10,
+              "note": "3×10 each side"
+            }
+          ]
+        },
+        {
+          "label": "Accessories",
+          "items": [
+            {
+              "id": "pullover",
+              "n": "Lat pullover",
+              "t": "sets",
+              "sets": 3,
+              "reps": 12,
+              "note": "3×12"
+            },
+            {
+              "id": "reardelt",
+              "n": "Rear delt fly",
+              "t": "sets",
+              "sets": 3,
+              "reps": 15,
+              "note": "3×15"
+            },
+            {
+              "id": "facepull",
+              "n": "Face pulls",
+              "t": "sets",
+              "sets": 3,
+              "reps": 15,
+              "note": "3×15"
+            }
+          ]
+        },
+        {
+          "label": "Rehab",
+          "items": [
+            {
+              "id": "trap3",
+              "n": "Trap 3 raises",
+              "t": "check",
+              "note": "2×10"
+            },
+            {
+              "id": "sideer",
+              "n": "Side-lying ER",
+              "t": "check",
+              "note": "2×12 each arm"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
