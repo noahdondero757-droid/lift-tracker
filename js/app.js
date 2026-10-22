@@ -454,16 +454,35 @@ setInterval(() => { const el = $("#elapsed"); if (el && draft) el.textContent = 
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && draft) persistDraft(); });
 
 /* ---------- boot ---------- */
+// Apply changes made to data/program.json since `base` to an in-app edited program, field by field,
+// leaving alone anything Noah changed himself. Returns true if anything changed.
+function mergeDefaults(prog, base, next) {
+  const FIELDS = ["n", "sets", "reps", "rounds", "note", "rest"], key = (d, it) => d.n + ":" + it.id;
+  const idx = p => { const m = {}; for (const d of p.days) for (const it of itemsOf(d)) m[key(d, it)] = it; return m; };
+  const b = idx(base), n = idx(next);
+  let changed = false;
+  for (const d of prog.days) for (const it of itemsOf(d)) {
+    const was = b[key(d, it)], now = n[key(d, it)];
+    if (!was || !now) continue;
+    for (const f of FIELDS) if (it[f] === was[f] && now[f] !== was[f]) { it[f] = now[f]; changed = true; }
+  }
+  const bp = base.progression || {}, np = next.progression || {};
+  prog.progression = prog.progression || {};
+  for (const id of Object.keys(np)) if (prog.progression[id] === bp[id] && np[id] !== bp[id]) { prog.progression[id] = np[id]; changed = true; }
+  return changed;
+}
+
 async function fetchJSON(url) { const r = await fetch(url, { cache: "no-cache" }); if (!r.ok) throw new Error(url); return r.json(); }
 
 (async () => {
   render();
   try {
-    const [stored, savedDraft, savedTimer, savedNames, imported, ws] = await Promise.all([
-      db.kvGet("program"), db.kvGet("draft"), db.kvGet("timer"), db.kvGet("names"), db.kvGet("imported"), db.allWorkouts(),
+    const [stored, savedDraft, savedTimer, savedNames, imported, ws, base] = await Promise.all([
+      db.kvGet("program"), db.kvGet("draft"), db.kvGet("timer"), db.kvGet("names"), db.kvGet("imported"), db.allWorkouts(), db.kvGet("programBase"),
     ]);
     names = savedNames || {};
-    try { defaultProgram = await fetchJSON("data/program.json"); } catch {}
+    let fetched = false;
+    try { defaultProgram = await fetchJSON("data/program.json"); fetched = true; } catch {}
     program = stored ? stored : defaultProgram ? clone(defaultProgram) : null;
     programEdited = !!stored;
     if (!program) { loadError = "Couldn't load the program. Connect to the internet once and reopen the app."; render(); return; }
@@ -473,7 +492,10 @@ async function fetchJSON(url) { const r = await fetch(url, { cache: "no-cache" }
       const defs = {};
       for (const d of defaultProgram.days) for (const it of itemsOf(d)) defs[it.id] = it;
       for (const d of program.days) for (const it of itemsOf(d)) if (it.rest === undefined && defs[it.id] && defs[it.id].rest) it.rest = defs[it.id].rest;
+      if (base && fetched && mergeDefaults(program, base, defaultProgram)) db.kvSet("program", clone(program));
     }
+    // Remember which default the phone last saw, so later changes to program.json can be merged in.
+    if (fetched) db.kvSet("programBase", defaultProgram);
     workouts = ws || [];
     if (!imported) {
       try {
@@ -497,4 +519,11 @@ async function fetchJSON(url) { const r = await fetch(url, { cache: "no-cache" }
   }
 })();
 
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+if ("serviceWorker" in navigator) {
+  // When a new version installs, reload once so the update shows on this open, not the next one.
+  // Everything typed is already saved, so a reload loses nothing.
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !reloaded) { reloaded = true; location.reload(); } });
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
