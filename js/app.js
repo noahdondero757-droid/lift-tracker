@@ -142,7 +142,8 @@ function exHTML(it, form, scope, ref) {
   }
   const prev = lastSets(workouts, it.id, ref) || [];
   const tg = scope === "draft" ? target(workouts, program, it) : null;
-  return `<div class="ex">${head}${targetText(it, tg)}<div class="sets"><span class="h">Set</span><span class="h">lb</span><span class="h">Reps</span>
+  const rest = scope === "draft" && it.rest > 0 ? `<div class="exnote">${fmtClock(it.rest * 1000)} rest starts when you log a set's reps</div>` : "";
+  return `<div class="ex">${head}${targetText(it, tg)}${rest}<div class="sets"><span class="h">Set</span><span class="h">lb</span><span class="h">Reps</span>
     ${(e.sets || []).map((s, i) => {
       const p = prev[i] || prev[prev.length - 1] || {};
       return `<span class="i">${i + 1}</span>
@@ -261,14 +262,15 @@ function vSettings() {
             <button type="button" class="iconbtn bad" data-act="pi" data-op="del" data-b="${bi}" data-i="${ii}" aria-label="Remove exercise">✕</button></div>
           ${it.t === "sets" ? `<div class="efields"><label>Sets<input inputmode="numeric" pattern="[0-9]*" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="sets" value="${esc(it.sets ?? "")}"></label>
             <label>Reps<input inputmode="numeric" pattern="[0-9]*" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="reps" value="${esc(it.reps ?? "")}"></label>
-            <label>+lb<input inputmode="decimal" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="inc" value="${esc((program.progression || {})[it.id] ?? "")}" placeholder="—" aria-label="Pounds added when all sets are hit (blank = no auto progression)"></label></div>` : ""}
+            <label>+lb<input inputmode="decimal" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="inc" value="${esc((program.progression || {})[it.id] ?? "")}" placeholder="—" aria-label="Pounds added when all sets are hit (blank = no auto progression)"></label>
+            <label>Rest s<input inputmode="numeric" pattern="[0-9]*" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="rest" value="${esc(it.rest || "")}" placeholder="—" aria-label="Rest between sets in seconds (blank = none)"></label></div>` : ""}
           ${it.t === "rounds" ? `<div class="efields"><label>Rounds<input inputmode="numeric" pattern="[0-9]*" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="rounds" value="${esc(it.rounds ?? "")}"></label></div>` : ""}
           <input data-f="prog" data-b="${bi}" data-i="${ii}" data-k="note" value="${esc(it.note || "")}" placeholder="Note, e.g. 4×5 · 2 min rest" aria-label="Note">
         </div>`).join("")}
         <div class="row"><span class="muted small">Add:</span>${["sets", "rounds", "check"].map(t => `<button type="button" class="btn ghost small" data-act="padd" data-b="${bi}" data-t="${t}">+ ${{ sets: "Sets", rounds: "Rounds", check: "Check" }[t]}</button>`).join("")}</div>
       </div>`).join("")}
       <button type="button" class="btn ghost wide" data-act="pb" data-op="add">+ Add block</button>
-      <div class="muted small">Changes save automatically. "+lb" is how much weight to add after you hit every set and rep; leave it blank for no auto progression.</div>
+      <div class="muted small">Changes save automatically. "+lb" is how much weight to add after you hit every set and rep; leave it blank for no auto progression. "Rest s" starts a rest timer (in seconds) each time you log a set\'s reps.</div>
     </div>
     <div class="muted small pad">Lift Tracker · works offline · data stays on this phone.</div>
   </section>`;
@@ -425,14 +427,23 @@ document.addEventListener("input", e => {
       const it = day.blocks[+el.dataset.b].items[+el.dataset.i];
       if (k === "n" || k === "note") it[k] = el.value;
       else if (k === "inc") { program.progression = program.progression || {}; const v = num(el.value); if (v > 0) program.progression[it.id] = v; else delete program.progression[it.id]; }
+      else if (k === "rest") { const v = parseInt(el.value, 10); it.rest = v > 0 ? v : 0; }
       else { const v = parseInt(el.value, 10); if (v > 0) it[k] = v; }
     }
     saveProgram();
   }
 });
 
+// Remember what a reps box held before editing, so rest only starts when a set is first logged.
+document.addEventListener("focusin", e => { if (e.target.dataset.k === "r") e.target.dataset.was = e.target.value; });
+
 document.addEventListener("change", e => {
   const el = e.target;
+  if (el.dataset.f === "set" && el.dataset.k === "r" && el.dataset.scope === "draft" && el.dataset.was === "" && num(el.value) != null) {
+    const it = itemsOf(dayOf(program, draft.day)).find(i => i.id === el.dataset.id), sets = draft.ex[el.dataset.id].sets;
+    el.dataset.was = el.value;
+    if (it && it.rest > 0 && +el.dataset.i < sets.length - 1) startTimer(`Rest · ${it.n}`, [["Rest", it.rest]]);
+  }
   if (el.dataset.f === "vol") { hist.vol = el.value; render(); }
   if (el.dataset.f === "import" && el.files && el.files[0]) { importBackup(el.files[0]); el.value = ""; }
 });
@@ -457,6 +468,12 @@ async function fetchJSON(url) { const r = await fetch(url, { cache: "no-cache" }
     programEdited = !!stored;
     if (!program) { loadError = "Couldn't load the program. Connect to the internet once and reopen the app."; render(); return; }
     if (!defaultProgram) defaultProgram = clone(program);
+    // Carry new per-item settings from the default program into an edited copy.
+    if (stored) {
+      const defs = {};
+      for (const d of defaultProgram.days) for (const it of itemsOf(d)) defs[it.id] = it;
+      for (const d of program.days) for (const it of itemsOf(d)) if (it.rest === undefined && defs[it.id] && defs[it.id].rest) it.rest = defs[it.id].rest;
+    }
     workouts = ws || [];
     if (!imported) {
       try {

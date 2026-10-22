@@ -27,7 +27,7 @@ them, and check work against each spec's Definition of done.
 ```
 program.days[] = { n, name, blocks[] }
 block = { label, timer?: { label, ph: [[phaseLabel, seconds], ...], rep? }, items[] }
-item  = { id, n (name), t: "sets"|"rounds"|"check", sets?, reps?, rounds?, note? }
+item  = { id, n (name), t: "sets"|"rounds"|"check", sets?, reps?, rounds?, note?, rest? }  // rest: seconds, auto-starts after each logged set
 program.progression = { squat: 10, trapbar: 10, bench: 5 }   // lb added when all sets×reps hit
 
 workout = { id, date "YYYY-MM-DD", day 1-4, mins, note,

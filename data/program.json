@@ -105,7 +105,8 @@
               "t": "sets",
               "sets": 4,
               "reps": 5,
-              "note": "4×5 @ ~80% · 2 min rest"
+              "note": "4×5 @ ~80% · 2 min rest",
+              "rest": 120
             }
           ]
         },
@@ -218,7 +219,8 @@
               "t": "sets",
               "sets": 4,
               "reps": 5,
-              "note": "4×5"
+              "note": "4×5 · 2 min rest",
+              "rest": 120
             }
           ]
         },
@@ -350,7 +352,8 @@
               "t": "sets",
               "sets": 4,
               "reps": 5,
-              "note": "4×5"
+              "note": "4×5 · 2 min rest",
+              "rest": 120
             }
           ]
         },
