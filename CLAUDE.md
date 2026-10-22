@@ -4,7 +4,8 @@ Phone-first workout tracker for Noah's 4-day athletic program: session logging, 
 automatic lift progression, history and progress charts. It's a PWA hosted on GitHub Pages and
 installed to his iPhone Home Screen.
 
-**The spec is `specs/lift-tracker.md`.** Build to it, and check work against its Definition of done.
+**Specs:** `specs/lift-tracker.md` (workouts, built) and `specs/vitals.md` (recovery data, next). Build to
+them, and check work against each spec's Definition of done.
 
 ## Files
 
@@ -12,6 +13,11 @@ installed to his iPhone Home Screen.
 - `data/program.json`: the program (days → blocks → items). This is Noah's training, so don't change
   exercises, sets or reps unless he asks. Item `id`s are referenced by history, so never rename an id.
 - `data/history.json`: his existing logged sessions, to import on first run.
+- `apps-script/Code.gs`: Google Apps Script that runs in Noah's Google account, pulls Fitbit data
+  from the Google Health API hourly, and serves it to the app at a private web link (`doGet`). It
+  keeps `PASTE_..._HERE` placeholders for the OAuth client, so never commit the real values, the link,
+  or the key.
+- `data/vitals-sample.json`: made-up vitals in the `doGet` shape, for development only.
 - `reference/current-app.html`: the old all-in-one app this replaces. Use it for logic
   (`target()`, `topSet()`, `nextDay()`, the timer, `newDraft()`) and for the visual style. It also
   contains health/sleep features that are out of scope here.
