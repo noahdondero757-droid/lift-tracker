@@ -65,13 +65,15 @@ function tick() {
     $("#tT").textContent = "0:00";
     $("#tL").textContent = `${T.label} · done`;
     $("#tR").textContent = "";
+    $("#tP").style.transform = "scaleX(0)";
     $("#timer").classList.add("flash");
     clearInterval(h);
     setTimeout(() => { if (T && T.i >= T.phases.length) stopTimer(); }, 3000);
     return;
   }
   if (i !== T.i) { T.i = i; beep(); }
-  const left = Math.ceil((T.ends[i] - now) / 1000);
+  const left = Math.ceil((T.ends[i] - now) / 1000), from = i ? T.ends[i - 1] : T.start;
+  $("#tP").style.transform = `scaleX(${Math.max(0, (T.ends[i] - now) / (T.ends[i] - from))})`;
   $("#timer").classList.toggle("flash", left <= 3);
   $("#tT").textContent = `${Math.floor(left / 60)}:${pad(left % 60)}`;
   $("#tL").textContent = T.phases.length > 1 ? T.phases[i][0] : T.label;

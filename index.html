@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lift Tracker</title>
 <meta name="description" content="Workout tracker for a 4-day athletic program.">
-<meta name="theme-color" content="#EDEFEC" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E1113" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Lift Tracker">
@@ -14,24 +14,23 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap">
 <link rel="stylesheet" href="styles.css">
 <script type="module" src="js/app.js"></script>
 </head>
 <body>
+<header class="navbar" aria-hidden="true"><span id="navTitle"></span></header>
 <main class="wrap" id="app" aria-live="polite"></main>
 <div class="timerbar" id="timer" hidden><div class="in">
   <div class="t" id="tT">0:00</div>
   <div class="tinfo"><div class="lbl" id="tL"></div><div class="rnd" id="tR"></div></div>
   <button data-act="stoptimer" type="button">Stop</button>
+  <div class="tprog"><span id="tP"></span></div>
 </div></div>
 <nav class="tabs" aria-label="Sections"><div class="in">
-  <button type="button" data-act="tab" data-tab="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Today</button>
-  <button type="button" data-act="tab" data-tab="train"><svg viewBox="0 0 24 24"><path d="M3 10v4M6 7v10M18 7v10M21 10v4M6 12h12"/></svg>Train</button>
-  <button type="button" data-act="tab" data-tab="history"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M21 19H3"/></svg>History</button>
-  <button type="button" data-act="tab" data-tab="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Settings</button>
+  <button type="button" data-act="tab" data-tab="today"><svg viewBox="0 0 28 28"><rect x="4" y="6" width="20" height="18" rx="4.5"/><path class="fill" d="M4 10.5a4.5 4.5 0 0 1 4.5-4.5h11a4.5 4.5 0 0 1 4.5 4.5V12H4z"/><path d="M9.5 3.5v4M18.5 3.5v4"/><circle class="dot" cx="14" cy="17.5" r="2.3"/></svg>Today</button>
+  <button type="button" data-act="tab" data-tab="train"><svg viewBox="0 0 28 28"><rect class="fill" x="3.5" y="9" width="4" height="10" rx="1.6"/><rect class="fill" x="20.5" y="9" width="4" height="10" rx="1.6"/><rect class="fill" x="7" y="6.5" width="3.5" height="15" rx="1.6"/><rect class="fill" x="17.5" y="6.5" width="3.5" height="15" rx="1.6"/><path d="M10.5 14h7M1.5 14h2M24.5 14h2"/></svg>Train</button>
+  <button type="button" data-act="tab" data-tab="history"><svg viewBox="0 0 28 28"><rect class="fill" x="4.5" y="13" width="5" height="10.5" rx="1.8"/><rect class="fill" x="11.5" y="5" width="5" height="18.5" rx="1.8"/><rect class="fill" x="18.5" y="9.5" width="5" height="14" rx="1.8"/></svg>History</button>
+  <button type="button" data-act="tab" data-tab="settings"><svg viewBox="0 0 28 28"><path d="M4 8h20M4 14h20M4 20h20"/><circle class="fill knob" cx="10" cy="8" r="2.8"/><circle class="fill knob" cx="18" cy="14" r="2.8"/><circle class="fill knob" cx="12" cy="20" r="2.8"/></svg>Settings</button>
 </div></nav>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" hidden></div>
 <div class="ask" id="ask" hidden></div>

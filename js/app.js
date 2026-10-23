@@ -36,13 +36,37 @@ function itemInfo(id) {
   return names[id] ? { id, ...names[id] } : null;
 }
 
-/* ---------- in-page confirmation ---------- */
+/* ---------- icons (SF Symbols look-alikes) ---------- */
+const IC = {
+  chev: `<svg class="chev" viewBox="0 0 8 14" aria-hidden="true"><path d="M1.5 1.5L6.5 7l-5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  play: `<svg class="ic" viewBox="0 0 12 14" aria-hidden="true"><path d="M1.5 1.6v10.8c0 .8.9 1.3 1.6.9l8.6-5.4c.6-.4.6-1.3 0-1.7L3.1.8C2.4.3 1.5.8 1.5 1.6z" fill="currentColor"/></svg>`,
+  plus: `<svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="10" fill="currentColor"/><path d="M10 5.5v9M5.5 10h9" stroke="var(--card)" stroke-width="2" stroke-linecap="round"/></svg>`,
+  up: `<svg class="ic" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 12V2M2.5 6.5L7 2l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  down: `<svg class="ic" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 2v10M2.5 7.5L7 12l4.5-4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  trash: `<svg class="ic" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 3.5h12M5 3.5V2h4v1.5M2.5 3.5l.8 10.2c.1.7.6 1.3 1.3 1.3h4.8c.7 0 1.2-.6 1.3-1.3l.8-10.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  share: `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 12.5V3M6.5 6.2L10 2.7l3.5 3.5M6.5 9H5v8h10V9h-1.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  inbox: `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5V12M6.5 8.5L10 12l3.5-3.5M6.5 9H5v8h10V9h-1.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  arrowUp: `<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M8 12V4.5M5 7.2L8 4.2l3 3" fill="none" stroke="var(--card)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  warn: `<svg class="ic" viewBox="0 0 16 15" aria-hidden="true"><path d="M6.6 1.2c.6-1.1 2.2-1.1 2.8 0l6.3 11.3c.6 1.1-.2 2.4-1.4 2.4H1.7C.5 14.9-.3 13.6.3 12.5z" fill="currentColor"/><path d="M8 5v4.2" stroke="var(--card)" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="11.8" r="1" fill="var(--card)"/></svg>`,
+};
+
+/* ---------- building blocks ---------- */
+const largeTitle = (title, sub = "", top = "") => `<header class="lt">${top}<h1>${title}</h1>${sub ? `<p class="lt-sub">${sub}</p>` : ""}</header>`;
+// Inset grouped list, like the Settings app. `inner` is already-escaped HTML.
+const group = (head, inner, { foot = "", right = "", cls = "" } = {}) =>
+  `<section class="group">${head || right ? `<div class="gh"><span>${head}</span>${right}</div>` : ""}<div class="list ${cls}">${inner}</div>${foot ? `<p class="gf">${foot}</p>` : ""}</section>`;
+const cell = ({ attrs = "", title, sub = "", detail = "", lead = "", chev = true, cls = "" }) =>
+  `<button type="button" class="cell ${cls}" ${attrs}>${lead}<span class="cell-body"><span class="cell-title">${title}</span>${sub ? `<span class="cell-sub">${sub}</span>` : ""}</span>${detail ? `<span class="cell-detail">${detail}</span>` : ""}${chev ? IC.chev : ""}</button>`;
+const seg = (opts, sel, act, extra = "") => `<div class="seg" role="tablist" style="--n:${opts.length}">${opts.map(([v, l]) => `<button type="button" role="tab" aria-selected="${String(sel) === String(v)}" data-act="${act}" ${extra} data-v="${v}">${l}</button>`).join("")}</div>`;
+
+/* ---------- in-page confirmation (iOS action sheet) ---------- */
 let askResolve = null;
 function ask({ title, body = "", yes = "OK", danger = false }) {
   const el = $("#ask");
-  el.innerHTML = `<div class="askpanel" role="alertdialog" aria-modal="true" aria-labelledby="askT">
-    <h3 id="askT">${esc(title)}</h3>${body ? `<p class="muted">${esc(body)}</p>` : ""}
-    <div class="askbtns"><button type="button" class="btn ghost" data-ask="0">Cancel</button><button type="button" class="btn ${danger ? "dangerfill" : ""}" data-ask="1">${esc(yes)}</button></div></div>`;
+  el.innerHTML = `<div class="actionsheet" role="alertdialog" aria-modal="true" aria-labelledby="askT">
+    <div class="as-group"><div class="as-head"><div class="as-title" id="askT">${esc(title)}</div>${body ? `<div class="as-msg">${esc(body)}</div>` : ""}</div>
+      <button type="button" class="as-btn ${danger ? "destructive" : ""}" data-ask="1">${esc(yes)}</button></div>
+    <div class="as-group"><button type="button" class="as-btn cancel" data-ask="0">Cancel</button></div></div>`;
   el.hidden = false;
   return new Promise(r => { askResolve = r; });
 }
@@ -59,15 +83,25 @@ function render() {
   document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === tab ? "page" : "false"));
   if (!ready) { $("#app").innerHTML = `<div class="empty pad">${loadError ? esc(loadError) : "Loading…"}</div>`; return; }
   $("#app").innerHTML = { today: vToday, train: vTrain, history: vHistory, settings: vSettings }[tab]();
+  const navTitle = { today: "Today", train: draft ? (dayOf(program, draft.day) || {}).name || "Workout" : "Train", history: "History", settings: "Settings" }[tab];
+  $("#navTitle").textContent = navTitle;
+  onScroll();
   const sh = $("#sheet");
-  if (editing) { const st = sh.hidden ? 0 : sh.scrollTop; sh.innerHTML = vSheet(); sh.hidden = false; sh.scrollTop = st; document.body.classList.add("locked"); }
-  else { sh.hidden = true; sh.innerHTML = ""; document.body.classList.remove("locked"); }
+  if (editing) {
+    const opening = sh.hidden, st = opening ? 0 : sh.scrollTop;
+    sh.innerHTML = vSheet(); sh.hidden = false; sh.scrollTop = st;
+    if (opening) { sh.classList.remove("enter"); void sh.offsetWidth; sh.classList.add("enter"); }
+    document.body.classList.add("locked");
+  } else { sh.hidden = true; sh.innerHTML = ""; document.body.classList.remove("locked"); }
 }
+// Compact title bar fades in once the large title scrolls away.
+function onScroll() { document.body.classList.toggle("scrolled", window.scrollY > 40); }
+addEventListener("scroll", onScroll, { passive: true });
 
 function targetText(it, tg) {
   if (!tg) return "";
-  const main = tg.up ? `Target ${lb(tg.w)} lb · +${tg.inc} after hitting all ${it.sets}×${it.reps}` : `Repeat ${lb(tg.w)} lb · finish all ${it.sets}×${it.reps} to move up`;
-  const dl = tg.deload ? `<div class="target warn">Missed reps at ${lb(tg.w)} twice in a row. Consider a deload to ${lb(tg.deload)} lb.</div>` : "";
+  const main = tg.up ? `${IC.arrowUp}<span>Target ${lb(tg.w)} lb · +${tg.inc} after hitting all ${it.sets}×${it.reps}</span>` : `<span>Repeat ${lb(tg.w)} lb · finish all ${it.sets}×${it.reps} to move up</span>`;
+  const dl = tg.deload ? `<div class="target warn">${IC.warn}<span>Missed reps at ${lb(tg.w)} twice in a row. Consider a deload to ${lb(tg.deload)} lb.</span></div>` : "";
   return `<div class="target ${tg.up ? "up" : ""}">${main}</div>${dl}`;
 }
 
@@ -78,40 +112,43 @@ function vToday() {
   let mainLine = "";
   if (main) {
     const tg = target(workouts, program, main), ts = topSet(lastSets(workouts, main.id));
-    mainLine = `<div class="muted">${esc(main.n)}${tg ? ` · ${tg.up ? "target" : "repeat"} <span class="mono ink">${lb(tg.w)} lb</span>${tg.up ? ` <span class="up mono">+${tg.inc}</span>` : ""}` : ts ? ` · last top set <span class="mono ink">${lb(ts.w)}×${ts.r}</span>` : ""}</div>`;
+    const val = tg ? `<span class="tnum ${tg.up ? "good" : ""}">${tg.up ? "Target" : "Repeat"} ${lb(tg.w)} lb${tg.up ? ` <span class="badge-inc">+${tg.inc}</span>` : ""}</span>` : ts ? `<span class="tnum">Last ${lb(ts.w)}×${ts.r}</span>` : `<span class="hl-none">First time logging it</span>`;
+    mainLine = `<div class="hero-lift"><span>${esc(main.n)}</span>${val}</div>`;
   }
+  const dots = [0, 1, 2, 3].map(i => `<span class="wkdot ${i < done ? "on" : ""}"></span>`).join("");
   const last = workouts[0];
   return `<section class="view">
-    <div class="plain"><div class="eyebrow">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div><h1>Today</h1></div>
-    <div class="card">
-      <div class="row between"><div class="eyebrow">${draft ? "In progress" : "Up next"}</div><span class="mono muted small">${done}/4 this week</span></div>
-      <div class="stack6"><h2>Day ${d.n} · ${esc(d.name)}</h2>${mainLine}</div>
-      <button class="btn wide big" data-act="${draft ? "tab" : "start"}" data-tab="train" data-day="${d.n}" type="button">${draft ? "Resume session" : "Start Day " + d.n}</button>
-      ${draft ? "" : `<button class="textbtn" type="button" data-act="tab" data-tab="train">Pick a different day</button>`}
+    ${largeTitle("Today", esc(new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })))}
+    <div class="hero">
+      <div class="hero-top"><span class="kicker">${draft ? "In Progress" : "Up Next"}</span><span class="wk" aria-label="${done} of 4 sessions this week">${dots}<span class="tnum">${done} of 4 this week</span></span></div>
+      <div><div class="hero-day">Day ${d.n}</div><div class="hero-name">${esc(d.name)}</div></div>
+      ${mainLine}
+      <button class="btn filled large" data-act="${draft ? "tab" : "start"}" data-tab="train" data-day="${d.n}" type="button">${draft ? "Resume Workout" : "Start Workout"}</button>
     </div>
-    ${last ? `<button type="button" class="card cardbtn" data-act="openw" data-id="${esc(last.id)}"><div class="eyebrow">Last session</div><div><strong>Day ${last.day}</strong> · ${esc((dayOf(program, last.day) || {}).name || "")}</div><div class="muted small">${esc(fmtDate(last.date))}${last.mins ? ` · ${last.mins} min` : ""}${last.note ? ` · ${esc(last.note)}` : ""}</div></button>` : ""}
+    ${draft ? "" : group("", cell({ attrs: `data-act="tab" data-tab="train"`, title: "Choose a Different Day" }))}
+    ${last ? group("Last Session", cell({ attrs: `data-act="openw" data-id="${esc(last.id)}"`, title: `Day ${last.day} · ${esc((dayOf(program, last.day) || {}).name || "Workout")}`, sub: `${esc(fmtDate(last.date))}${last.mins ? ` · ${last.mins} min` : ""}${last.note ? ` · ${esc(last.note)}` : ""}` })) : ""}
   </section>`;
 }
 
 function vTrain() {
   if (!draft) {
     const nx = nextDay(workouts, program);
-    return `<section class="view"><div class="plain"><div class="eyebrow">${esc(program.name || "Program")}</div><h1>Train</h1></div>
-      <div class="days">${program.days.map(d => {
+    return `<section class="view">${largeTitle("Train", esc(program.name || "Program"))}
+      ${group("Choose a Day", program.days.map(d => {
         const items = itemsOf(d).filter(i => i.t !== "check"), main = mainItem(d), tg = main && target(workouts, program, main);
-        return `<button type="button" class="day ${d.n === nx ? "next" : ""}" data-act="start" data-day="${d.n}">
-          <span class="dn">${d.n}</span><span><h3>${esc(d.name)}</h3><span class="meta">${items.slice(0, 3).map(i => esc(i.n)).join(" · ")}</span>${tg ? `<span class="meta mono ${tg.up ? "up" : ""}">${esc(main.n)} ${tg.up ? "target" : "repeat"} ${lb(tg.w)} lb</span>` : ""}</span>
-          <span class="mono muted small">${d.n === nx ? "NEXT" : ""}</span></button>`;
-      }).join("")}</div></section>`;
+        const sub = tg ? `<span class="${tg.up ? "good" : ""}">${esc(main.n)} · ${tg.up ? "target" : "repeat"} ${lb(tg.w)} lb</span>` : items.slice(0, 3).map(i => esc(i.n)).join(" · ");
+        return cell({ attrs: `data-act="start" data-day="${d.n}"`, lead: `<span class="daybadge ${d.n === nx ? "on" : ""}">${d.n}</span>`, title: esc(d.name), sub, detail: d.n === nx ? "Next" : "", cls: "daycell" });
+      }).join(""))}</section>`;
   }
   const d = dayOf(program, draft.day);
   fillForm(draft, d);
+  const top = `<div class="lt-top"><span class="lt-sub">Day ${d.n} · <span class="tnum" id="elapsed">${fmtClock(Date.now() - draft.start)}</span></span><button class="link destructive" type="button" data-act="discard">Discard</button></div>`;
   return `<section class="view">
-    <div class="plain"><div class="row between"><div class="eyebrow">Day ${d.n} · <span class="mono" id="elapsed">${fmtClock(Date.now() - draft.start)}</span></div><button class="textbtn bad" type="button" data-act="discard">Discard</button></div><h1>${esc(d.name)}</h1></div>
-    <div class="card"><div class="eyebrow">Rest timer</div><div class="presets">${[30, 60, 90, 120, 180].map(s => `<button class="btn ghost mono" type="button" data-act="preset" data-s="${s}">${s < 60 ? s + "s" : s === 60 ? "60s" : s === 90 ? "90s" : (s / 60) + ":00"}</button>`).join("")}</div></div>
-    <div class="card">${formBlocks(draft, d, "draft")}</div>
-    <div class="card"><label class="eyebrow" for="note">Notes</label><textarea id="note" data-f="note" data-scope="draft" placeholder="How it felt, what to change next time">${esc(draft.note)}</textarea>
-      <button class="btn wide big" type="button" data-act="finish">Finish &amp; save</button></div>
+    ${largeTitle(esc(d.name), "", top)}
+    ${group("Rest Timer", `<div class="presets">${[30, 60, 90, 120, 180].map(s => `<button class="btn tinted" type="button" data-act="preset" data-s="${s}">${s < 120 ? s + "s" : (s / 60) + ":00"}</button>`).join("")}</div>`, { cls: "padded" })}
+    ${formBlocks(draft, d, "draft")}
+    ${group("Notes", `<textarea id="note" data-f="note" data-scope="draft" placeholder="How it felt, what to change next time">${esc(draft.note)}</textarea>`, { cls: "padded" })}
+    <button class="btn filled large" type="button" data-act="finish">Finish Workout</button>
   </section>`;
 }
 
@@ -125,52 +162,48 @@ function formBlocks(form, d, scope) {
   });
   const blocks = d.blocks.map((b, bi) => ({ ...b, bi }));
   if (extra.length) blocks.push({ label: "Other logged items", items: extra });
-  return blocks.map(b => `<div class="block">
-    <div class="blockhead"><div class="eyebrow">${esc(b.label)}</div>${b.timer && scope === "draft" ? `<button class="btn ghost small" type="button" data-act="btimer" data-b="${b.bi}">▶ ${esc(b.timer.label)}</button>` : ""}</div>
-    ${b.items.map(it => exHTML(it, form, scope, ref)).join("")}</div>`).join("");
+  return blocks.map(b => group(esc(b.label), b.items.map(it => exHTML(it, form, scope, ref)).join(""),
+    { right: b.timer && scope === "draft" ? `<button class="link" type="button" data-act="btimer" data-b="${b.bi}">${IC.play}${esc(b.timer.label)}</button>` : "" })).join("");
 }
 
 function exHTML(it, form, scope, ref) {
   const e = form.ex[it.id] || {}, sc = `data-scope="${scope}" data-id="${esc(it.id)}"`;
-  const note = it.note ? `<span class="exnote">${esc(it.note)}</span>` : "";
+  const note = it.note ? `<span class="cell-detail">${esc(it.note)}</span>` : "";
   if (it.t === "check")
-    return `<button type="button" class="check ${e.done ? "on" : ""}" data-act="check" ${sc} aria-pressed="${!!e.done}"><span class="box"></span><span class="exname">${esc(it.n)}</span>${note}</button>`;
-  const head = `<div class="exhead"><span class="exname">${esc(it.n)}</span>${note}</div>`;
+    return `<button type="button" class="cell checkcell ${e.done ? "on" : ""}" data-act="check" ${sc} aria-pressed="${!!e.done}"><span class="circle" aria-hidden="true"></span><span class="cell-body"><span class="cell-title">${esc(it.n)}</span></span>${note}</button>`;
+  const head = `<div class="item-head"><span class="cell-title">${esc(it.n)}</span>${note}</div>`;
   if (it.t === "rounds") {
     const r = e.rounds || [], done = r.filter(Boolean).length;
-    return `<div class="ex">${head}<div class="pips">${r.map((on, i) => `<button type="button" class="pip ${on ? "on" : ""}" data-act="pip" ${sc} data-i="${i}" aria-pressed="${on}" aria-label="Round ${i + 1}">${i + 1}</button>`).join("")}<button type="button" class="pip add" data-act="addpip" ${sc} aria-label="Add round">+</button></div><span class="exnote mono">${done}/${r.length} rounds</span></div>`;
+    return `<div class="item">${head}<div class="pips">${r.map((on, i) => `<button type="button" class="pip ${on ? "on" : ""}" data-act="pip" ${sc} data-i="${i}" aria-pressed="${on}" aria-label="Round ${i + 1}">${i + 1}</button>`).join("")}<button type="button" class="pip add" data-act="addpip" ${sc} aria-label="Add round">+</button></div><div class="item-foot tnum">${done} of ${r.length} rounds</div></div>`;
   }
   const prev = lastSets(workouts, it.id, ref) || [];
   const tg = scope === "draft" ? target(workouts, program, it) : null;
-  const rest = scope === "draft" && it.rest > 0 ? `<div class="exnote">${fmtClock(it.rest * 1000)} rest starts when you log a set's reps</div>` : "";
-  return `<div class="ex">${head}${targetText(it, tg)}${rest}<div class="sets"><span class="h">Set</span><span class="h">lb</span><span class="h">Reps</span>
+  const rest = scope === "draft" && it.rest > 0 ? `<div class="item-foot">${fmtClock(it.rest * 1000)} rest starts when you log a set's reps</div>` : "";
+  return `<div class="item">${head}${targetText(it, tg)}${rest}<div class="sets"><span class="h">Set</span><span class="h">lb</span><span class="h">Reps</span>
     ${(e.sets || []).map((s, i) => {
       const p = prev[i] || prev[prev.length - 1] || {};
-      return `<span class="i">${i + 1}</span>
+      return `<span class="i tnum">${i + 1}</span>
       <input inputmode="decimal" enterkeyhint="next" autocomplete="off" data-f="set" ${sc} data-i="${i}" data-k="w" value="${esc(s.w)}" placeholder="${esc(tg ? tg.w : (p.w || ""))}" aria-label="${esc(it.n)} set ${i + 1} weight">
       <input inputmode="numeric" pattern="[0-9]*" enterkeyhint="next" autocomplete="off" data-f="set" ${sc} data-i="${i}" data-k="r" value="${esc(s.r)}" placeholder="${esc(p.r || it.reps || "")}" aria-label="${esc(it.n)} set ${i + 1} reps">`;
     }).join("")}
-    </div><button type="button" class="textbtn" data-act="addset" ${sc}>+ Add set</button></div>`;
+    </div><button type="button" class="link addset" data-act="addset" ${sc}>${IC.plus}Add Set</button></div>`;
 }
 
 function vSheet() {
   const f = editing, d = dayOf(program, f.day) || { n: f.day, name: "Workout", blocks: [] };
   fillForm(f, d);
-  return `<div class="shead"><button type="button" class="iconbtn" data-act="closesheet" aria-label="Close">✕</button><div class="stitle">Day ${f.day} · ${esc(d.name)}</div></div>
+  return `<div class="sheetbar"><button type="button" class="link" data-act="closesheet">Cancel</button><div class="sheettitle">Day ${f.day} · ${esc(d.name)}</div><button type="button" class="link bold" data-act="savew">Save</button></div>
     <div class="sbody">
-      <div class="card"><div class="grid2">
-        <div class="field"><label for="eDate">Date</label><input id="eDate" type="date" data-f="edate" value="${esc(f.date)}"></div>
-        <div class="field"><label for="eMins">Minutes</label><input id="eMins" inputmode="numeric" pattern="[0-9]*" data-f="emins" value="${esc(f.mins ?? "")}"></div>
-      </div></div>
-      <div class="card">${formBlocks(f, d, "edit")}</div>
-      <div class="card"><label class="eyebrow" for="eNote">Notes</label><textarea id="eNote" data-f="note" data-scope="edit">${esc(f.note)}</textarea>
-        <button class="btn wide big" type="button" data-act="savew">Save changes</button>
-        <button class="btn danger wide" type="button" data-act="delw">Delete session</button></div>
+      ${group("Details", `<label class="cell field"><span class="cell-title">Date</span><input id="eDate" type="date" data-f="edate" value="${esc(f.date)}"></label>
+        <label class="cell field"><span class="cell-title">Minutes</span><input id="eMins" inputmode="numeric" pattern="[0-9]*" data-f="emins" value="${esc(f.mins ?? "")}" placeholder="—"></label>`)}
+      ${formBlocks(f, d, "edit")}
+      ${group("Notes", `<textarea id="eNote" data-f="note" data-scope="edit">${esc(f.note)}</textarea>`, { cls: "padded" })}
+      ${group("", `<button type="button" class="cell center destructive" data-act="delw"><span class="cell-title">Delete Session</span></button>`)}
     </div>`;
 }
 
 function vHistory() {
-  if (!workouts.length) return `<section class="view"><div class="plain"><div class="eyebrow">0 sessions logged</div><h1>History</h1></div><div class="card"><div class="empty">Finish a session and it shows up here.</div></div></section>`;
+  if (!workouts.length) return `<section class="view">${largeTitle("History", "No sessions yet")}${group("", `<div class="empty">Finish a workout and it shows up here.</div>`, { cls: "padded" })}</section>`;
   // R5.2 best sets
   const prs = MAIN.map(([id, n]) => {
     let best = null, date = null;
@@ -198,81 +231,66 @@ function vHistory() {
   // R5.5 sessions per week
   const cnt = wks.map(k => { const v = workouts.filter(w => weekOf(w.date) === k).length; return { label: wkLabel(k), v, info: `Week of ${fmtDate(k)}: ${v} session${v === 1 ? "" : "s"}` }; });
   const thisWk = cnt[cnt.length - 1].v;
-  const seg = (key, opts) => `<div class="seg" role="tablist" style="grid-template-columns:repeat(${opts.length},1fr)">${opts.map(([v, l]) => `<button type="button" role="tab" aria-selected="${hist[key] === v}" data-act="hist" data-k="${key}" data-v="${v}">${l}</button>`).join("")}</div>`;
 
   return `<section class="view">
-    <div class="plain"><div class="eyebrow">${workouts.length} session${workouts.length === 1 ? "" : "s"} logged</div><h1>History</h1></div>
-    <div class="plain"><div class="eyebrow">Best sets · estimated 1RM</div></div>
-    <div class="prs">${prs.map(p => `<div class="pr"><span class="eyebrow">${p.n}</span><span class="v">${p.best ? `${lb(p.best.w)}×${p.best.r}` : "—"}</span><span class="muted mono small">${p.best ? `e1RM ${Math.round(p.best.v)}${p.best.w ? "" : " (BW)"} · ${esc(fmtDate(p.date))}` : "No sets yet"}</span></div>`).join("")}</div>
+    ${largeTitle("History", `${workouts.length} session${workouts.length === 1 ? "" : "s"} logged`)}
+    <section class="group"><div class="gh"><span>Best Sets</span></div>
+      <div class="prs">${prs.map(p => `<div class="pr"><span class="pr-l">${p.n}</span><span class="pr-v tnum">${p.best ? `${lb(p.best.w)}<small>×${p.best.r}</small>` : "—"}</span><span class="pr-s tnum">${p.best ? `e1RM ${Math.round(p.best.v)}${p.best.w ? "" : " (BW)"} · ${esc(fmtDate(p.date))}` : "No sets yet"}</span></div>`).join("")}</div>
+      <p class="gf">Estimated 1-rep max uses weight × (1 + reps ÷ 30).</p></section>
 
-    <div class="card"><div class="eyebrow">Progress · ${esc(liftName)}</div>
-      ${seg("lift", MAIN.map(([id, n]) => [id, n.replace(" DL", "")]))}
-      ${seg("range", [["4", "4W"], ["12", "12W"], ["all", "All"]])}
-      ${pts.length ? `${progressChart(pts)}<div class="legend"><span><i style="background:var(--c1)"></i>Top set weight</span><span><i style="background:var(--c2)"></i>Estimated 1RM</span></div><div class="hint">Tap a point to open that session.</div>` : `<div class="empty">No ${esc(liftName.toLowerCase())} sets in this range yet.</div>`}
-    </div>
+    ${group("Progress", `${seg(MAIN.map(([id, n]) => [id, n.replace(" DL", "")]), hist.lift, "hist", `data-k="lift"`)}
+      ${seg([["4", "4W"], ["12", "12W"], ["all", "All"]], hist.range, "hist", `data-k="range"`)}
+      ${pts.length ? `${progressChart(pts)}<div class="legend"><span><i style="background:var(--c1)"></i>Top set</span><span><i style="background:var(--c2)"></i>Estimated 1RM</span></div>` : `<div class="empty">No ${esc(liftName.toLowerCase())} sets in this range yet.</div>`}`,
+      { cls: "padded", foot: pts.length ? "Tap a point to open that session." : "" })}
 
-    <div class="card"><div class="row between"><div class="eyebrow">Weekly volume</div>
-      <select class="sel" data-f="vol" aria-label="Volume for">
-        <option value="all" ${hist.vol === "all" ? "selected" : ""}>All lifts</option>
+    ${group("Weekly Volume", `${barChart(volBars, { id: "volOut" })}<div class="hint" id="volOut">Sets × reps × weight. Tap a bar for the number.</div>`, { cls: "padded", right: `<label class="menu"><select data-f="vol" aria-label="Volume for">
+        <option value="all" ${hist.vol === "all" ? "selected" : ""}>All Lifts</option>
         <optgroup label="By day">${program.days.map(d => `<option value="day:${d.n}" ${hist.vol === "day:" + d.n ? "selected" : ""}>Day ${d.n} · ${esc(d.name)}</option>`).join("")}</optgroup>
         <optgroup label="By lift">${setItems.map(it => `<option value="lift:${esc(it.id)}" ${hist.vol === "lift:" + it.id ? "selected" : ""}>${esc(it.n)}</option>`).join("")}</optgroup>
-      </select></div>
-      ${barChart(volBars, { id: "volOut" })}
-      <div class="hint" id="volOut">Sets × reps × weight, last 12 weeks. Tap a bar for the number.</div>
-    </div>
+      </select></label>` })}
 
-    <div class="card"><div class="row between"><div class="eyebrow">Sessions per week</div><span class="mono muted small">${thisWk}/4 this week</span></div>
-      ${barChart(cnt, { goal: 4, id: "cntOut", showVals: true })}
-      <div class="hint" id="cntOut">Last 12 weeks. Dashed line is the 4-session target.</div>
-    </div>
+    ${group("Sessions per Week", `${barChart(cnt, { goal: 4, id: "cntOut", showVals: true })}<div class="hint" id="cntOut">Last 12 weeks. Dashed line is the 4-session target.</div>`, { cls: "padded", right: `<span class="gh-r tnum">${thisWk} of 4 this week</span>` })}
 
-    <div class="card"><div class="eyebrow">Sessions</div><div class="list">${workouts.map(w => {
+    ${group("Sessions", workouts.map(w => {
       const d = dayOf(program, w.day), main = d ? mainItem(d) : null, t = main ? topSet(w.ex && w.ex[main.id] && w.ex[main.id].sets) : null;
-      return `<button type="button" class="li" data-act="openw" data-id="${esc(w.id)}"><span><strong>Day ${w.day}</strong> · ${esc(d ? d.name : "Workout")}</span><span class="mono muted small">${esc(fmtDate(w.date))}</span>
-        <span class="sub">${w.mins ? w.mins + " min" : ""}${t ? `${w.mins ? " · " : ""}${esc(main.n)} <span class="mono">${lb(t.w)}×${t.r}</span>` : ""}${w.note ? `<br>${esc(w.note)}` : ""}</span><span class="chev" aria-hidden="true">›</span></button>`;
-    }).join("")}</div></div>
+      const sub = [w.mins ? w.mins + " min" : "", t ? `${esc(main.n)} <span class="tnum">${lb(t.w)}×${t.r}</span>` : ""].filter(Boolean).join(" · ") + (w.note ? `<span class="cell-note">${esc(w.note)}</span>` : "");
+      return cell({ attrs: `data-act="openw" data-id="${esc(w.id)}"`, title: `Day ${w.day} · ${esc(d ? d.name : "Workout")}`, sub, detail: esc(fmtDate(w.date)) });
+    }).join(""))}
   </section>`;
 }
 
 function vSettings() {
   const d = dayOf(program, progDay) || program.days[0];
   const tl = t => t ? `${t.ph.map(p => `${p[0]} ${p[1] >= 60 && p[1] % 60 === 0 ? p[1] / 60 + " min" : p[1] + "s"}`).join(" / ")}${t.rep ? " ×" + t.rep : ""}` : "";
+  const ib = (act, op, b, i, icon, label, dis, cls = "") => `<button type="button" class="rbtn ${cls}" data-act="${act}" data-op="${op}" data-b="${b}"${i != null ? ` data-i="${i}"` : ""} aria-label="${label}" ${dis ? "disabled" : ""}>${icon}</button>`;
+  const TYPE = { sets: "Sets", rounds: "Rounds", check: "Checkbox" };
+  const num1 = (bi, ii, k, label, v, mode = "numeric") => `<label class="mini"><span>${label}</span><input inputmode="${mode}" ${mode === "numeric" ? `pattern="[0-9]*"` : ""} data-f="prog" data-b="${bi}" data-i="${ii}" data-k="${k}" value="${esc(v ?? "")}" placeholder="—"></label>`;
   return `<section class="view">
-    <div class="plain"><div class="eyebrow">Data &amp; program</div><h1>Settings</h1></div>
-    <div class="card"><div class="eyebrow">Backup</div>
-      <div class="muted small">Everything is stored on this phone. Export a backup file to move your data to a new phone, then import it there.</div>
-      <div class="row"><button class="btn" type="button" data-act="export">Export backup</button>
-      <label class="btn ghost filebtn">Import backup<input type="file" accept="application/json,.json" data-f="import" hidden></label></div>
-      <div class="muted small">${workouts.length} sessions on this phone.</div>
-    </div>
-    <div class="card"><div class="row between"><div class="eyebrow">Edit program</div>${programEdited ? `<button class="textbtn" type="button" data-act="resetprog">Reset to default</button>` : ""}</div>
-      <div class="seg" role="tablist" style="grid-template-columns:repeat(${program.days.length},1fr)">${program.days.map(x => `<button type="button" role="tab" aria-selected="${x.n === d.n}" data-act="progday" data-n="${x.n}">Day ${x.n}</button>`).join("")}</div>
-      <div class="field"><label>Day name</label><input data-f="prog" data-k="dayname" value="${esc(d.name)}"></div>
-      ${d.blocks.map((b, bi) => `<div class="eblock">
-        <div class="erow"><input class="grow" data-f="prog" data-b="${bi}" data-k="label" value="${esc(b.label)}" aria-label="Block name">
-          <button type="button" class="iconbtn" data-act="pb" data-op="up" data-b="${bi}" aria-label="Move block up" ${bi === 0 ? "disabled" : ""}>↑</button>
-          <button type="button" class="iconbtn" data-act="pb" data-op="down" data-b="${bi}" aria-label="Move block down" ${bi === d.blocks.length - 1 ? "disabled" : ""}>↓</button>
-          <button type="button" class="iconbtn bad" data-act="pb" data-op="del" data-b="${bi}" aria-label="Remove block">✕</button></div>
-        ${b.timer ? `<div class="muted small">Timer: ${esc(tl(b.timer))}</div>` : ""}
-        ${b.items.map((it, ii) => `<div class="eitem">
-          <input data-f="prog" data-b="${bi}" data-i="${ii}" data-k="n" value="${esc(it.n)}" aria-label="Exercise name">
-          <div class="erow"><span class="tag">${{ sets: "Sets", rounds: "Rounds", check: "Check" }[it.t]}</span><span class="grow"></span>
-            <button type="button" class="iconbtn" data-act="pi" data-op="up" data-b="${bi}" data-i="${ii}" aria-label="Move up" ${bi === 0 && ii === 0 ? "disabled" : ""}>↑</button>
-            <button type="button" class="iconbtn" data-act="pi" data-op="down" data-b="${bi}" data-i="${ii}" aria-label="Move down" ${bi === d.blocks.length - 1 && ii === b.items.length - 1 ? "disabled" : ""}>↓</button>
-            <button type="button" class="iconbtn bad" data-act="pi" data-op="del" data-b="${bi}" data-i="${ii}" aria-label="Remove exercise">✕</button></div>
-          ${it.t === "sets" ? `<div class="efields"><label>Sets<input inputmode="numeric" pattern="[0-9]*" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="sets" value="${esc(it.sets ?? "")}"></label>
-            <label>Reps<input inputmode="numeric" pattern="[0-9]*" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="reps" value="${esc(it.reps ?? "")}"></label>
-            <label>+lb<input inputmode="decimal" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="inc" value="${esc((program.progression || {})[it.id] ?? "")}" placeholder="—" aria-label="Pounds added when all sets are hit (blank = no auto progression)"></label>
-            <label>Rest s<input inputmode="numeric" pattern="[0-9]*" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="rest" value="${esc(it.rest || "")}" placeholder="—" aria-label="Rest between sets in seconds (blank = none)"></label></div>` : ""}
-          ${it.t === "rounds" ? `<div class="efields"><label>Rounds<input inputmode="numeric" pattern="[0-9]*" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="rounds" value="${esc(it.rounds ?? "")}"></label></div>` : ""}
-          <input data-f="prog" data-b="${bi}" data-i="${ii}" data-k="note" value="${esc(it.note || "")}" placeholder="Note, e.g. 4×5 · 2 min rest" aria-label="Note">
-        </div>`).join("")}
-        <div class="row"><span class="muted small">Add:</span>${["sets", "rounds", "check"].map(t => `<button type="button" class="btn ghost small" data-act="padd" data-b="${bi}" data-t="${t}">+ ${{ sets: "Sets", rounds: "Rounds", check: "Check" }[t]}</button>`).join("")}</div>
+    ${largeTitle("Settings")}
+    ${group("Backup", `
+      <button type="button" class="cell" data-act="export"><span class="sicon blue">${IC.share}</span><span class="cell-body"><span class="cell-title">Export Backup</span></span>${IC.chev}</button>
+      <label class="cell"><span class="sicon green">${IC.inbox}</span><span class="cell-body"><span class="cell-title">Import Backup</span></span>${IC.chev}<input type="file" accept="application/json,.json" data-f="import" hidden></label>`,
+      { foot: `Everything is stored on this phone (${workouts.length} session${workouts.length === 1 ? "" : "s"}). Export a backup to move your data to a new phone, then import it there.` })}
+
+    ${group("Program", `${seg(program.days.map(x => [x.n, "Day " + x.n]), d.n, "progday")}
+      <label class="field-row"><span>Day name</span><input data-f="prog" data-k="dayname" value="${esc(d.name)}"></label>`,
+      { cls: "padded", right: programEdited ? `<button class="link" type="button" data-act="resetprog">Reset to Default</button>` : "", foot: `Changes save automatically. "+lb" is the weight added after you hit every set and rep (blank = no auto progression). "Rest" starts a timer in seconds each time you log a set's reps.` })}
+
+    ${d.blocks.map((b, bi) => group("", `
+      <div class="eblock"><input class="eb-name" data-f="prog" data-b="${bi}" data-k="label" value="${esc(b.label)}" aria-label="Block name">
+        <span class="rbtns">${ib("pb", "up", bi, null, IC.up, "Move block up", bi === 0)}${ib("pb", "down", bi, null, IC.down, "Move block down", bi === d.blocks.length - 1)}${ib("pb", "del", bi, null, IC.trash, "Remove block", false, "destructive")}</span></div>
+      ${b.timer ? `<div class="eb-timer">${IC.play}Timer: ${esc(tl(b.timer))}</div>` : ""}
+      ${b.items.map((it, ii) => `<div class="eitem">
+        <div class="ei-top"><input class="ei-name" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="n" value="${esc(it.n)}" aria-label="Exercise name">
+          <span class="rbtns">${ib("pi", "up", bi, ii, IC.up, "Move up", bi === 0 && ii === 0)}${ib("pi", "down", bi, ii, IC.down, "Move down", bi === d.blocks.length - 1 && ii === b.items.length - 1)}${ib("pi", "del", bi, ii, IC.trash, "Remove exercise", false, "destructive")}</span></div>
+        <div class="ei-fields"><span class="tag">${TYPE[it.t]}</span>
+          ${it.t === "sets" ? num1(bi, ii, "sets", "Sets", it.sets) + num1(bi, ii, "reps", "Reps", it.reps) + num1(bi, ii, "inc", "+lb", (program.progression || {})[it.id], "decimal") + num1(bi, ii, "rest", "Rest", it.rest || "") : ""}
+          ${it.t === "rounds" ? num1(bi, ii, "rounds", "Rounds", it.rounds) : ""}</div>
+        <input class="ei-note" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="note" value="${esc(it.note || "")}" placeholder="Note, e.g. 4×5 · 2 min rest" aria-label="Note">
       </div>`).join("")}
-      <button type="button" class="btn ghost wide" data-act="pb" data-op="add">+ Add block</button>
-      <div class="muted small">Changes save automatically. "+lb" is how much weight to add after you hit every set and rep; leave it blank for no auto progression. "Rest s" starts a rest timer (in seconds) each time you log a set\'s reps.</div>
-    </div>
-    <div class="muted small pad">Lift Tracker · works offline · data stays on this phone.</div>
+      <div class="eadd">${["sets", "rounds", "check"].map(t => `<button type="button" class="link" data-act="padd" data-b="${bi}" data-t="${t}">${IC.plus}${TYPE[t]}</button>`).join("")}</div>`)).join("")}
+
+    ${group("", `<button type="button" class="cell center" data-act="pb" data-op="add"><span class="cell-title link-c">Add Block</span></button>`, { foot: "Lift Tracker works offline. Your data stays on this phone." })}
   </section>`;
 }
 
@@ -280,7 +298,6 @@ function vSettings() {
 const formOf = scope => scope === "edit" ? editing : draft;
 const touch = scope => { if (scope === "draft") persistDraft(); };
 const go = t => { tab = t; history.replaceState(null, "", "#" + t); render(); window.scrollTo(0, 0); };
-let timerOn = false;
 
 async function act(a, el) {
   const d = el.dataset;
@@ -338,7 +355,7 @@ async function act(a, el) {
         program = clone(defaultProgram); programEdited = false; await db.kvSet("program", undefined); toast("Program reset"); render();
       }
       break;
-    case "progday": progDay = +d.n; render(); break;
+    case "progday": progDay = +d.v; render(); break;
     case "pb": await editBlock(d); break;
     case "pi": await editItem(d); break;
     case "padd": {

@@ -76,8 +76,9 @@ One user: Noah. He's not a developer, so the app has to work without any setup o
 - R7.1 Installable PWA: `manifest.webmanifest` (name "Lift Tracker", icon, `display: standalone`,
   theme color) and a service worker that caches the app for offline use.
 - R7.2 Bottom tab bar: **Today · Train · History · Settings**. Respect iPhone safe areas.
-- R7.3 Light and dark theme following the system setting. Keep the current look (dark slate,
-  condensed display headings, monospace numbers) from `reference/current-app.html`.
+- R7.3 Light and dark theme following the system setting. iOS-native look (Noah's call, Oct 2026):
+  SF system font, iOS system colors, large titles, inset grouped lists, frosted tab bar, card-style
+  sheets and action-sheet confirmations.
 
 ## Constraints
 

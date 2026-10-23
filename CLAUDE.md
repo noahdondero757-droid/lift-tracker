@@ -19,7 +19,8 @@ them, and check work against each spec's Definition of done.
   or the key.
 - `data/vitals-sample.json`: made-up vitals in the `doGet` shape, for development only.
 - `reference/current-app.html`: the old all-in-one app this replaces. Use it for logic
-  (`target()`, `topSet()`, `nextDay()`, the timer, `newDraft()`) and for the visual style. It also
+  (`target()`, `topSet()`, `nextDay()`, the timer, `newDraft()`). Its visual style is no longer used: the
+  app now looks iOS-native (see spec R7.3). It also
   contains health/sleep features that are out of scope here.
 
 ## Data shapes
