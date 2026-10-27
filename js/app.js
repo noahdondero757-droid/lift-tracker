@@ -3,7 +3,7 @@ import { startTimer, stopTimer, initTimer } from "./timer.js";
 import { progressChart, barChart } from "./charts.js";
 import {
   MAIN, pad, today, parseD, num, uid, weekOf, sortWorkouts, nextDay, dayOf, itemsOf, mainItem,
-  lastSets, topSet, target, toForm, fillForm, newDraft, fromForm, volume, lastWeeks,
+  lastSets, lastWeight, topSet, target, toForm, fillForm, newDraft, fromForm, volume, lastWeeks,
 } from "./logic.js";
 
 /* ---------- utils ---------- */
@@ -174,7 +174,8 @@ function exHTML(it, form, scope, ref) {
   const head = `<div class="item-head"><span class="cell-title">${esc(it.n)}</span>${note}</div>`;
   if (it.t === "rounds") {
     const r = e.rounds || [], done = r.filter(Boolean).length;
-    return `<div class="item">${head}<div class="pips">${r.map((on, i) => `<button type="button" class="pip ${on ? "on" : ""}" data-act="pip" ${sc} data-i="${i}" aria-pressed="${on}" aria-label="Round ${i + 1}">${i + 1}</button>`).join("")}<button type="button" class="pip add" data-act="addpip" ${sc} aria-label="Add round">+</button></div><div class="item-foot tnum">${done} of ${r.length} rounds</div></div>`;
+    const wt = it.wt ? `<label class="rw"><span>Weight</span><input inputmode="decimal" autocomplete="off" data-f="rw" ${sc} value="${esc(e.w || "")}" placeholder="${esc(lastWeight(workouts, it.id, ref))}" aria-label="${esc(it.n)} weight in pounds"><span class="rw-u">lb</span></label>` : "";
+    return `<div class="item">${head}${wt}<div class="pips">${r.map((on, i) => `<button type="button" class="pip ${on ? "on" : ""}" data-act="pip" ${sc} data-i="${i}" aria-pressed="${on}" aria-label="Round ${i + 1}">${i + 1}</button>`).join("")}<button type="button" class="pip add" data-act="addpip" ${sc} aria-label="Add round">+</button></div><div class="item-foot tnum">${done} of ${r.length} rounds</div></div>`;
   }
   const prev = lastSets(workouts, it.id, ref) || [];
   const tg = scope === "draft" ? target(workouts, program, it) : null;
@@ -274,7 +275,7 @@ function vSettings() {
 
     ${group("Program", `${seg(program.days.map(x => [x.n, "Day " + x.n]), d.n, "progday")}
       <label class="field-row"><span>Day name</span><input data-f="prog" data-k="dayname" value="${esc(d.name)}"></label>`,
-      { cls: "padded", right: programEdited ? `<button class="link" type="button" data-act="resetprog">Reset to Default</button>` : "", foot: `Changes save automatically. "+lb" is the weight added after you hit every set and rep (blank = no auto progression). "Rest" starts a timer in seconds each time you log a set's reps.` })}
+      { cls: "padded", right: programEdited ? `<button class="link" type="button" data-act="resetprog">Reset to Default</button>` : "", foot: `Changes save automatically. "+lb" is the weight added after you hit every set and rep (blank = no auto progression). "Rest" starts a timer in seconds each time you log a set's reps. "Weight" adds a pounds box to a rounds exercise, like a carry.` })}
 
     ${d.blocks.map((b, bi) => group("", `
       <div class="eblock"><input class="eb-name" data-f="prog" data-b="${bi}" data-k="label" value="${esc(b.label)}" aria-label="Block name">
@@ -285,7 +286,7 @@ function vSettings() {
           <span class="rbtns">${ib("pi", "up", bi, ii, IC.up, "Move up", bi === 0 && ii === 0)}${ib("pi", "down", bi, ii, IC.down, "Move down", bi === d.blocks.length - 1 && ii === b.items.length - 1)}${ib("pi", "del", bi, ii, IC.trash, "Remove exercise", false, "destructive")}</span></div>
         <div class="ei-fields"><span class="tag">${TYPE[it.t]}</span>
           ${it.t === "sets" ? num1(bi, ii, "sets", "Sets", it.sets) + num1(bi, ii, "reps", "Reps", it.reps) + num1(bi, ii, "inc", "+lb", (program.progression || {})[it.id], "decimal") + num1(bi, ii, "rest", "Rest", it.rest || "") : ""}
-          ${it.t === "rounds" ? num1(bi, ii, "rounds", "Rounds", it.rounds) : ""}</div>
+          ${it.t === "rounds" ? num1(bi, ii, "rounds", "Rounds", it.rounds) + `<label class="mini sw"><span>Weight</span><input type="checkbox" role="switch" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="wt" ${it.wt ? "checked" : ""} aria-label="Log a weight for this exercise"></label>` : ""}</div>
         <input class="ei-note" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="note" value="${esc(it.note || "")}" placeholder="Note, e.g. 4×5 · 2 min rest" aria-label="Note">
       </div>`).join("")}
       <div class="eadd">${["sets", "rounds", "check"].map(t => `<button type="button" class="link" data-act="padd" data-b="${bi}" data-t="${t}">${IC.plus}${TYPE[t]}</button>`).join("")}</div>`)).join("")}
@@ -434,6 +435,7 @@ document.addEventListener("input", e => {
   if (!f) return;
   if (f === "set") { const form = formOf(el.dataset.scope); form.ex[el.dataset.id].sets[+el.dataset.i][el.dataset.k] = el.value; touch(el.dataset.scope); }
   else if (f === "note") { formOf(el.dataset.scope).note = el.value; touch(el.dataset.scope); }
+  else if (f === "rw") { formOf(el.dataset.scope).ex[el.dataset.id].w = el.value; touch(el.dataset.scope); }
   else if (f === "edate") { if (el.value) editing.date = el.value; }
   else if (f === "emins") editing.mins = el.value;
   else if (f === "prog") {
@@ -462,6 +464,7 @@ document.addEventListener("change", e => {
     if (it && it.rest > 0 && +el.dataset.i < sets.length - 1) startTimer(`Rest · ${it.n}`, [["Rest", it.rest]]);
   }
   if (el.dataset.f === "vol") { hist.vol = el.value; render(); }
+  if (el.dataset.f === "prog" && el.dataset.k === "wt") { dayOf(program, progDay).blocks[+el.dataset.b].items[+el.dataset.i].wt = el.checked; saveProgram(); }
   if (el.dataset.f === "import" && el.files && el.files[0]) { importBackup(el.files[0]); el.value = ""; }
 });
 
@@ -474,7 +477,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 // Apply changes made to data/program.json since `base` to an in-app edited program, field by field,
 // leaving alone anything Noah changed himself. Returns true if anything changed.
 function mergeDefaults(prog, base, next) {
-  const FIELDS = ["n", "sets", "reps", "rounds", "note", "rest"], key = (d, it) => d.n + ":" + it.id;
+  const FIELDS = ["n", "sets", "reps", "rounds", "note", "rest", "wt"], key = (d, it) => d.n + ":" + it.id;
   const idx = p => { const m = {}; for (const d of p.days) for (const it of itemsOf(d)) m[key(d, it)] = it; return m; };
   const b = idx(base), n = idx(next);
   let changed = false;

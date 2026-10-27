@@ -375,14 +375,16 @@
               "n": "Farmer's carry",
               "t": "rounds",
               "rounds": 3,
-              "note": "40 m · heavy"
+              "note": "40 yd · heavy",
+              "wt": true
             },
             {
               "id": "suitcase",
               "n": "Suitcase carry",
               "t": "rounds",
               "rounds": 3,
-              "note": "20 m each side"
+              "note": "20 yd each side",
+              "wt": true
             }
           ]
         },
@@ -394,7 +396,8 @@
               "n": "Sled push / drag",
               "t": "rounds",
               "rounds": 4,
-              "note": "20 m each way · or lunges 10 each leg"
+              "note": "20 yd each way · or lunges 10 each leg",
+              "wt": true
             }
           ]
         },

@@ -49,6 +49,16 @@ export function lastSets(workouts, id, ref) {
   return null;
 }
 
+// Weight logged last time on a rounds item (e.g. a carry), or "".
+export function lastWeight(workouts, id, ref) {
+  for (const w of workouts) {
+    if (!before(w, ref)) continue;
+    const e = w.ex && w.ex[id];
+    if (e && e.w) return e.w;
+  }
+  return "";
+}
+
 export function topSet(sets) {
   let best = null;
   for (const s of sets || []) {
@@ -93,7 +103,7 @@ export function toForm(w) {
   const ex = {};
   for (const [id, e] of Object.entries(w.ex || {})) {
     if (e.sets) ex[id] = { sets: e.sets.map(s => ({ w: String(s.w ?? ""), r: String(s.r ?? "") })) };
-    else if (e.rounds != null) ex[id] = { rounds: Array.from({ length: Math.max(e.of || 0, e.rounds) }, (_, i) => i < e.rounds) };
+    else if (e.rounds != null) ex[id] = { rounds: Array.from({ length: Math.max(e.of || 0, e.rounds) }, (_, i) => i < e.rounds), w: String(e.w ?? "") };
     else ex[id] = { done: !!e.done };
   }
   return { id: w.id, day: w.day, date: w.date, ts: w.ts, mins: w.mins, note: w.note || "", ex };
@@ -104,7 +114,7 @@ export function fillForm(form, day) {
   for (const it of itemsOf(day)) {
     if (form.ex[it.id]) continue;
     if (it.t === "sets") form.ex[it.id] = { sets: Array.from({ length: it.sets || 1 }, () => ({ w: "", r: "" })) };
-    else if (it.t === "rounds") form.ex[it.id] = { rounds: Array(it.rounds || 1).fill(false) };
+    else if (it.t === "rounds") form.ex[it.id] = { rounds: Array(it.rounds || 1).fill(false), w: "" };
     else form.ex[it.id] = { done: false };
   }
   return form;
@@ -119,7 +129,7 @@ export function fromForm(form) {
   const ex = {};
   for (const [id, e] of Object.entries(form.ex)) {
     if (e.sets) { const s = e.sets.filter(x => x.r !== "" || x.w !== ""); if (s.length) ex[id] = { sets: s }; }
-    else if (e.rounds) { const n = e.rounds.filter(Boolean).length; if (n) ex[id] = { rounds: n, of: e.rounds.length }; }
+    else if (e.rounds) { const n = e.rounds.filter(Boolean).length; if (n || e.w) ex[id] = { rounds: n, of: e.rounds.length, ...(e.w ? { w: e.w } : {}) }; }
     else if (e.done) ex[id] = { done: true };
   }
   return { ex };
