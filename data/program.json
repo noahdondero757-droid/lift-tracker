@@ -428,10 +428,11 @@
               "n": "30-on / 30-off finisher",
               "t": "rounds",
               "rounds": 8,
-              "note": "Bike, row or sled · hard"
+              "note": "Bike, row or sled · hard",
+              "how": "Hard, not all-out: go at about 8–9 out of 10, a pace you can repeat for all 8 rounds. On the 30 off, keep moving slowly; don't stop. If rounds 6–8 fall apart, start a bit easier next time. If round 8 feels easy, push harder. Use a bike, rower or sled and stick with the same one each week so you can compare."
             }
           ],
-          "about": "Why the clock: 30 sec all-out, 30 sec easy, 8 times. Start it and it beeps at every switch, so you never have to watch the time."
+          "about": "Why the clock: 30 sec hard, 30 sec easy, 8 times (8 minutes). Start it and it beeps at every switch, so you never have to watch the time."
         }
       ]
     },
