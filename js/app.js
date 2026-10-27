@@ -21,6 +21,7 @@ let tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "toda
 let program = null, defaultProgram = null, programEdited = false, names = {};
 let workouts = [], draft = null, editing = null, ready = false, loadError = "";
 let hist = { lift: "squat", range: "12", vol: "all" }, progDay = 1;
+const howOpen = new Set(); // exercises whose "How to" is expanded
 
 const persistDraft = () => db.kvSet("draft", draft ? clone(draft) : undefined).catch(() => toast("Couldn't save. Storage may be full."));
 let progT;
@@ -47,6 +48,7 @@ const IC = {
   share: `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 12.5V3M6.5 6.2L10 2.7l3.5 3.5M6.5 9H5v8h10V9h-1.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   inbox: `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5V12M6.5 8.5L10 12l3.5-3.5M6.5 9H5v8h10V9h-1.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   arrowUp: `<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M8 12V4.5M5 7.2L8 4.2l3 3" fill="none" stroke="var(--card)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  info: `<svg class="ic" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 8v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="5.2" r="1.1" fill="currentColor"/></svg>`,
   warn: `<svg class="ic" viewBox="0 0 16 15" aria-hidden="true"><path d="M6.6 1.2c.6-1.1 2.2-1.1 2.8 0l6.3 11.3c.6 1.1-.2 2.4-1.4 2.4H1.7C.5 14.9-.3 13.6.3 12.5z" fill="currentColor"/><path d="M8 5v4.2" stroke="var(--card)" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="11.8" r="1" fill="var(--card)"/></svg>`,
 };
 
@@ -163,7 +165,8 @@ function formBlocks(form, d, scope) {
   const blocks = d.blocks.map((b, bi) => ({ ...b, bi }));
   if (extra.length) blocks.push({ label: "Other logged items", items: extra });
   return blocks.map(b => group(esc(b.label), b.items.map(it => exHTML(it, form, scope, ref)).join(""),
-    { right: b.timer && scope === "draft" ? `<button class="link" type="button" data-act="btimer" data-b="${b.bi}">${IC.play}${esc(b.timer.label)}</button>` : "" })).join("");
+    { right: b.timer && scope === "draft" ? `<button class="link" type="button" data-act="btimer" data-b="${b.bi}">${IC.play}${esc(b.timer.label)}</button>` : "",
+      foot: b.about && scope === "draft" ? esc(b.about) : "" })).join("");
 }
 
 function exHTML(it, form, scope, ref) {
@@ -171,7 +174,9 @@ function exHTML(it, form, scope, ref) {
   const note = it.note ? `<span class="cell-detail">${esc(it.note)}</span>` : "";
   if (it.t === "check")
     return `<button type="button" class="cell checkcell ${e.done ? "on" : ""}" data-act="check" ${sc} aria-pressed="${!!e.done}"><span class="circle" aria-hidden="true"></span><span class="cell-body"><span class="cell-title">${esc(it.n)}</span></span>${note}</button>`;
-  const head = `<div class="item-head"><span class="cell-title">${esc(it.n)}</span>${note}</div>`;
+  const open = howOpen.has(it.id);
+  const how = it.how ? `<button type="button" class="link howbtn" data-act="how" data-id="${esc(it.id)}" aria-expanded="${open}">${IC.info}${open ? "Hide" : "How to"}</button>${open ? `<p class="how">${esc(it.how)}</p>` : ""}` : "";
+  const head = `<div class="item-head"><span class="cell-title">${esc(it.n)}</span>${note}</div>${how}`;
   if (it.t === "rounds") {
     const r = e.rounds || [], done = r.filter(Boolean).length;
     const wt = it.wt ? `<label class="rw"><span>Weight</span><input inputmode="decimal" autocomplete="off" data-f="rw" ${sc} value="${esc(e.w || "")}" placeholder="${esc(lastWeight(workouts, it.id, ref))}" aria-label="${esc(it.n)} weight in pounds"><span class="rw-u">lb</span></label>` : "";
@@ -281,6 +286,7 @@ function vSettings() {
       <div class="eblock"><input class="eb-name" data-f="prog" data-b="${bi}" data-k="label" value="${esc(b.label)}" aria-label="Block name">
         <span class="rbtns">${ib("pb", "up", bi, null, IC.up, "Move block up", bi === 0)}${ib("pb", "down", bi, null, IC.down, "Move block down", bi === d.blocks.length - 1)}${ib("pb", "del", bi, null, IC.trash, "Remove block", false, "destructive")}</span></div>
       ${b.timer ? `<div class="eb-timer">${IC.play}Timer: ${esc(tl(b.timer))}</div>` : ""}
+      <div class="eitem"><textarea class="ei-how" rows="2" data-f="prog" data-b="${bi}" data-k="about" placeholder="About this block, e.g. why the timer" aria-label="About this block">${esc(b.about || "")}</textarea></div>
       ${b.items.map((it, ii) => `<div class="eitem">
         <div class="ei-top"><input class="ei-name" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="n" value="${esc(it.n)}" aria-label="Exercise name">
           <span class="rbtns">${ib("pi", "up", bi, ii, IC.up, "Move up", bi === 0 && ii === 0)}${ib("pi", "down", bi, ii, IC.down, "Move down", bi === d.blocks.length - 1 && ii === b.items.length - 1)}${ib("pi", "del", bi, ii, IC.trash, "Remove exercise", false, "destructive")}</span></div>
@@ -288,6 +294,7 @@ function vSettings() {
           ${it.t === "sets" ? num1(bi, ii, "sets", "Sets", it.sets) + num1(bi, ii, "reps", "Reps", it.reps) + num1(bi, ii, "inc", "+lb", (program.progression || {})[it.id], "decimal") + num1(bi, ii, "rest", "Rest", it.rest || "") : ""}
           ${it.t === "rounds" ? num1(bi, ii, "rounds", "Rounds", it.rounds) + `<label class="mini sw"><span>Weight</span><input type="checkbox" role="switch" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="wt" ${it.wt ? "checked" : ""} aria-label="Log a weight for this exercise"></label>` : ""}</div>
         <input class="ei-note" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="note" value="${esc(it.note || "")}" placeholder="Note, e.g. 4×5 · 2 min rest" aria-label="Note">
+        ${it.t === "check" ? "" : `<textarea class="ei-how" rows="2" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="how" placeholder="How to do it (optional)" aria-label="How to do it">${esc(it.how || "")}</textarea>`}
       </div>`).join("")}
       <div class="eadd">${["sets", "rounds", "check"].map(t => `<button type="button" class="link" data-act="padd" data-b="${bi}" data-t="${t}">${IC.plus}${TYPE[t]}</button>`).join("")}</div>`)).join("")}
 
@@ -349,6 +356,7 @@ async function act(a, el) {
       }
       break;
     case "hist": hist[d.k] = d.v; render(); break;
+    case "how": howOpen.has(d.id) ? howOpen.delete(d.id) : howOpen.add(d.id); render(); break;
     case "barinfo": { const o = document.getElementById(d.out); if (o) o.textContent = d.text; break; }
     case "export": exportBackup(); break;
     case "resetprog":
@@ -441,10 +449,10 @@ document.addEventListener("input", e => {
   else if (f === "prog") {
     const day = dayOf(program, progDay), k = el.dataset.k;
     if (k === "dayname") day.name = el.value;
-    else if (k === "label") day.blocks[+el.dataset.b].label = el.value;
+    else if (k === "label" || k === "about") day.blocks[+el.dataset.b][k] = el.value;
     else {
       const it = day.blocks[+el.dataset.b].items[+el.dataset.i];
-      if (k === "n" || k === "note") it[k] = el.value;
+      if (k === "n" || k === "note" || k === "how") it[k] = el.value;
       else if (k === "inc") { program.progression = program.progression || {}; const v = num(el.value); if (v > 0) program.progression[it.id] = v; else delete program.progression[it.id]; }
       else if (k === "rest") { const v = parseInt(el.value, 10); it.rest = v > 0 ? v : 0; }
       else { const v = parseInt(el.value, 10); if (v > 0) it[k] = v; }
@@ -477,7 +485,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 // Apply changes made to data/program.json since `base` to an in-app edited program, field by field,
 // leaving alone anything Noah changed himself. Returns true if anything changed.
 function mergeDefaults(prog, base, next) {
-  const FIELDS = ["n", "sets", "reps", "rounds", "note", "rest", "wt"], key = (d, it) => d.n + ":" + it.id;
+  const FIELDS = ["n", "sets", "reps", "rounds", "note", "rest", "wt", "how"], key = (d, it) => d.n + ":" + it.id;
   const idx = p => { const m = {}; for (const d of p.days) for (const it of itemsOf(d)) m[key(d, it)] = it; return m; };
   const b = idx(base), n = idx(next);
   let changed = false;
@@ -486,6 +494,12 @@ function mergeDefaults(prog, base, next) {
     if (!was || !now) continue;
     for (const f of FIELDS) if (it[f] === was[f] && now[f] !== was[f]) { it[f] = now[f]; changed = true; }
   }
+  // Block notes ("about"), matched by day, position and name.
+  for (const d of prog.days) d.blocks.forEach((bl, i) => {
+    const bd = base.days.find(x => x.n === d.n), nd = next.days.find(x => x.n === d.n);
+    const was = bd && bd.blocks[i], now = nd && nd.blocks[i];
+    if (was && now && was.label === bl.label && now.label === bl.label && bl.about === was.about && now.about !== was.about) { bl.about = now.about; changed = true; }
+  });
   const bp = base.progression || {}, np = next.progression || {};
   prog.progression = prog.progression || {};
   for (const id of Object.keys(np)) if (prog.progression[id] === bp[id] && np[id] !== bp[id]) { prog.progression[id] = np[id]; changed = true; }

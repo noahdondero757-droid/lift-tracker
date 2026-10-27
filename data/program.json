@@ -376,7 +376,8 @@
               "t": "rounds",
               "rounds": 3,
               "note": "40 yd · heavy",
-              "wt": true
+              "wt": true,
+              "how": "Hold a heavy dumbbell or handle in each hand. Stand tall, shoulders back, brace your stomach. Walk 40 yd with short, quick steps without setting them down. Pick a weight that's hard to hold by the end. Log the weight in one hand."
             },
             {
               "id": "suitcase",
@@ -384,9 +385,11 @@
               "t": "rounds",
               "rounds": 3,
               "note": "20 yd each side",
-              "wt": true
+              "wt": true,
+              "how": "One weight in one hand only. Walk 20 yd without leaning toward the weight: stay level, as if it weren't there. Switch hands and walk 20 yd back. That's one round. It trains your core to resist bending sideways."
             }
-          ]
+          ],
+          "about": "Why the clock: it sets your pace. Each time a new 2-minute round starts, do one farmer's carry and one suitcase carry (both hands), then rest for whatever's left of the 2 minutes. 3 rounds. It keeps rest short enough to stay honest but long enough to carry heavy."
         },
         {
           "label": "Sled",
@@ -396,10 +399,12 @@
               "n": "Sled push / drag",
               "t": "rounds",
               "rounds": 4,
-              "note": "20 yd each way · or lunges 10 each leg",
-              "wt": true
+              "note": "Push 20 yd, drag 20 yd back",
+              "wt": true,
+              "how": "One round = push the sled 20 yd, then drag it 20 yd back to the start. Push: hands on the handles, arms straight, body leaning in, drive with short powerful steps. Drag: hold the straps or handles, face the sled and walk backward, staying low in your legs. No sled? Do 10 walking lunges each leg per round. Log the weight you put on the sled."
             }
-          ]
+          ],
+          "about": "No clock here. Rest about 60–90 sec between rounds, enough to push hard every time."
         },
         {
           "label": "Finisher",
@@ -425,7 +430,8 @@
               "rounds": 8,
               "note": "Bike, row or sled · hard"
             }
-          ]
+          ],
+          "about": "Why the clock: 30 sec all-out, 30 sec easy, 8 times. Start it and it beeps at every switch, so you never have to watch the time."
         }
       ]
     },
