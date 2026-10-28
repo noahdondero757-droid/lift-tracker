@@ -148,3 +148,28 @@ export function lastWeeks(n) {
   for (let i = n - 1; i >= 0; i--) { const x = new Date(d); x.setDate(d.getDate() - i * 7); out.push(ymd(x)); }
   return out;
 }
+
+// Pair watch workouts (from Google Health) with logged sessions. A session's time window is
+// [finished − mins, finished]; the watch workout overlapping it most wins. Sessions without a save
+// time (imported history) fall back to the longest watch workout on the same date.
+// Returns { byId: {sessionId: watchWorkout}, unmatched: [watchWorkout] }.
+const isWalk = x => /walk|hike|sleep/i.test(x.type || "");
+export function matchWatch(workouts, watch) {
+  const byId = {}, used = new Set();
+  const list = watch.filter(x => x && x.start && x.end);
+  for (const w of workouts) {
+    let best = null, score = 0;
+    if (w.ts && w.mins) {
+      const a = w.ts - w.mins * 6e4, b = w.ts;
+      for (const x of list) {
+        if (used.has(x.start)) continue;
+        const o = Math.min(b, +new Date(x.end)) - Math.max(a, +new Date(x.start));
+        if (o > score) { score = o; best = x; }
+      }
+    }
+    if (!best) for (const x of list) if (!used.has(x.start) && x.date === w.date && !isWalk(x) && (!best || x.mins > best.mins)) best = x;
+    if (best) { byId[w.id] = best; used.add(best.start); }
+  }
+  const unmatched = list.filter(x => !used.has(x.start) && !isWalk(x) && x.mins >= 15).sort((a, b) => a.start < b.start ? 1 : -1);
+  return { byId, unmatched };
+}

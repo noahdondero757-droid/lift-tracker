@@ -18,7 +18,9 @@ GET <vitals link>   (the link includes ?key=…)
 → { "updated": ISO, "days": { "YYYY-MM-DD": {
       "hrv": ms, "rhr": bpm, "rr": breaths/min, "spo2": %, "steps": n, "vo2": ml/kg/min, "weight": lb,
       "sleep": { "deep": min, "rem": min, "light": min, "awake": min,
-                 "onset": ISO (first moment asleep), "wakeMin": min awake after onset, "wakes": n } } } }
+                 "onset": ISO (first moment asleep), "wakeMin": min awake after onset, "wakes": n } } },
+    "workouts": [ { "start": ISO, "end": ISO, "date": "YYYY-MM-DD", "mins": n, "type": "Weightlifting",
+                    "avgHr": bpm, "maxHr": bpm, "cal": kcal } ] }   // tracked on the watch; any field but start/end can be missing
 → { "error": "bad key" }   if the key is wrong
 ```
 
@@ -39,6 +41,13 @@ GET <vitals link>   (the link includes ?key=…)
   with "Updated 3h ago". The service worker must **not** cache or intercept the vitals request.
 - V1.4 Status line in Settings: "Connected · updated 4:12 PM", "Link is wrong (bad key)",
   "Couldn't reach Google. Showing data from …", or "Not set up". Include a **Test link** button.
+
+### V1b. Watch workouts (built)
+- Each logged session is paired with the watch workout that overlaps it in time (else the longest one
+  that day, ignoring walks). History shows the watch's duration, heart rate and calories; the session
+  sheet has a "From Your Watch" group.
+- Watch workouts from the last 14 days (15+ min, not walks) with no logged session are listed in History
+  under "From Your Watch". Tap to log one (pre-filled date, minutes and next day in the rotation), or ✕ to hide it.
 
 ### V2. Today screen
 - V2.1 Above the workout card, a 2×2 grid of tiles: **Sleep score**, **HRV**, **Resting HR**,

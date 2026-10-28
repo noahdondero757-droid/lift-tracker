@@ -1,5 +1,5 @@
 // Training Log ⇄ Fitbit link
-// Pulls your Fitbit data (HRV, sleep, resting HR, breathing, SpO2, steps, VO2 max, weight)
+// Pulls your Fitbit data (HRV, sleep, resting HR, breathing, SpO2, steps, VO2 max, weight, workouts)
 // from Google Health every hour and saves it to a Google Doc called "Training Log – Fitbit Data".
 // It also serves that data to the Lift Tracker app through a private web link (doGet below).
 //
@@ -113,10 +113,12 @@ function sync() {
   if (points.length) out.sample = points[points.length - 1]; // kept so the app can adapt to the data shape
   out.days = normalize_(out);
   saveDays_(out.days);
+  out.workouts = workouts_(out);
+  saveWorkouts_(out.workouts);
   const body = getDoc_().getBody();
   body.setText('===BEGIN===\n' + JSON.stringify(out) + '\n===END===');
   Logger.log('HRV days found: ' + Object.keys(out.hrv).length + ' | sleep sessions: ' + out.sleep.length +
-    ' | days for app: ' + Object.keys(out.days).length + ' | other data: ' + Object.keys(out.daily).map(k => k + ' ' + Object.keys(out.daily[k]).length).join(', ') +
+    ' | days for app: ' + Object.keys(out.days).length + ' | workouts: ' + out.workouts.length + ' | other data: ' + Object.keys(out.daily).map(k => k + ' ' + Object.keys(out.daily[k]).length).join(', ') +
     (out.errors.length ? ' | errors: ' + out.errors.length : ''));
 }
 
@@ -229,11 +231,11 @@ function sleepOf_(p) {
   return { date: date, deep: sum('deep'), rem: sum('rem'), light: sum('light'), awake: sum('awake'),
            onset: new Date(on).toISOString(), wakeMin: mid.reduce((a, x) => a + min(x), 0), wakes: mid.length };
 }
-function histDoc_() {
-  const p = PropertiesService.getScriptProperties(), id = p.getProperty('HIST_ID');
+function histDoc_(prop, name) {
+  const p = PropertiesService.getScriptProperties(), id = p.getProperty(prop || 'HIST_ID');
   if (id) { try { return DocumentApp.openById(id); } catch (e) {} }
-  const doc = DocumentApp.create('Training Log – Vitals History');
-  p.setProperty('HIST_ID', doc.getId());
+  const doc = DocumentApp.create(name || 'Training Log – Vitals History');
+  p.setProperty(prop || 'HIST_ID', doc.getId());
   return doc;
 }
 function loadDays_() { try { return JSON.parse(histDoc_().getBody().getText() || '{}'); } catch (e) { return {}; } }
@@ -243,6 +245,58 @@ function saveDays_(days) {   // keep up to 180 days of history across runs
   const trimmed = {};
   Object.keys(all).sort().slice(-180).forEach(d => trimmed[d] = all[d]);
   histDoc_().getBody().setText(JSON.stringify(trimmed));
+}
+
+// ---------- workouts tracked on the watch ----------
+// workouts[] = { start, end (ISO), date, mins, type, avgHr, maxHr, cal }
+// Field names are matched loosely; out.raw keeps a couple of raw points so the shape can be checked.
+const EXERCISE_TYPES = ['exercise', 'exercise-session', 'activity-session', 'workout'];
+function walkPath_(o, fn, path) {
+  if (o && typeof o === 'object') Object.keys(o).forEach(k => { const p = (path ? path + '.' : '') + k; fn(p, o[k]); walkPath_(o[k], fn, p); });
+}
+function workouts_(out) {
+  let pts = [];
+  for (let i = 0; i < EXERCISE_TYPES.length && !pts.length; i++) {
+    const errs = out.errors.length;
+    pts = list_(EXERCISE_TYPES[i], out, 3);
+    if (pts.length) { out.raw[EXERCISE_TYPES[i]] = pts.slice(-2); out.errors.length = errs; }
+  }
+  const cutoff = new Date(Date.now() - DAYS_BACK * 864e5).toISOString();
+  return pts.map(workoutOf_).filter(w => w && w.start >= cutoff);
+}
+function workoutOf_(p) {
+  let start = null, end = null, type = null, cal = null, avgHr = null, maxHr = null;
+  const isos = [];
+  walkPath_(p, (path, v) => {
+    const key = path.split('.').pop();
+    if (typeof v === 'string' && /^20\d\d-\d\d-\d\dT/.test(v)) {
+      isos.push(v);
+      if (!start && /start/i.test(path)) start = v;
+      if (!end && /end/i.test(path)) end = v;
+    } else if (typeof v === 'string') {
+      if (!type && /type|activity|title|display/i.test(key) && !/source|platform|device|unit/i.test(path) && v.indexOf('/') < 0 && v.length < 40) type = v;
+    } else if (typeof v === 'number') {
+      if (cal === null && /calor|energy|kcal/i.test(path)) cal = v;
+      if (/heart/i.test(path) && /max/i.test(path)) { if (maxHr === null) maxHr = v; }
+      else if (avgHr === null && /heart/i.test(path) && /avg|average|mean/i.test(path)) avgHr = v;
+    }
+  });
+  isos.sort();
+  start = start || isos[0]; end = end || isos[isos.length - 1];
+  if (!start || !end || end <= start) return null;
+  const mins = Math.round((new Date(end) - new Date(start)) / 6e4);
+  if (mins < 3) return null;
+  const pretty = type ? type.replace(/_/g, ' ').toLowerCase().replace(/^./, c => c.toUpperCase()) : null;
+  return { start: start, end: end, date: Utilities.formatDate(new Date(start), Session.getScriptTimeZone(), 'yyyy-MM-dd'), mins: mins,
+           type: pretty, avgHr: avgHr && Math.round(avgHr), maxHr: maxHr && Math.round(maxHr), cal: cal && Math.round(cal) };
+}
+function loadWorkouts_() { try { return JSON.parse(histDoc_('WORKOUTS_ID', 'Training Log – Workouts History').getBody().getText() || '[]'); } catch (e) { return []; } }
+function saveWorkouts_(list) {   // keep 120 days, one entry per start time
+  const all = {};
+  loadWorkouts_().concat(list).forEach(w => all[w.start] = w);
+  const cutoff = new Date(Date.now() - 120 * 864e5).toISOString();
+  const keep = Object.keys(all).sort().filter(k => k >= cutoff).map(k => all[k]);
+  histDoc_('WORKOUTS_ID', 'Training Log – Workouts History').getBody().setText(JSON.stringify(keep));
 }
 
 // ---------- private web link for the app ----------
@@ -260,5 +314,5 @@ function showAppLink() {
 function doGet(e) {
   const out = x => ContentService.createTextOutput(JSON.stringify(x)).setMimeType(ContentService.MimeType.JSON);
   if (!e || !e.parameter || e.parameter.key !== key_()) return out({ error: 'bad key' });
-  return out({ updated: new Date().toISOString(), days: loadDays_() });
+  return out({ updated: new Date().toISOString(), days: loadDays_(), workouts: loadWorkouts_() });
 }

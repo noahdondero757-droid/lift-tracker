@@ -1,9 +1,10 @@
 import * as db from "./db.js";
 import { startTimer, stopTimer, initTimer } from "./timer.js";
 import { progressChart, barChart } from "./charts.js";
+import { V, initVitals, setLink, refreshVitals, statusText, watchWorkouts } from "./vitals.js";
 import {
   MAIN, pad, today, parseD, num, uid, weekOf, sortWorkouts, nextDay, dayOf, itemsOf, mainItem,
-  lastSets, lastWeight, topSet, target, toForm, fillForm, newDraft, fromForm, volume, lastWeeks,
+  lastSets, lastWeight, matchWatch, topSet, target, toForm, fillForm, newDraft, fromForm, volume, lastWeeks,
 } from "./logic.js";
 
 /* ---------- utils ---------- */
@@ -22,6 +23,9 @@ let program = null, defaultProgram = null, programEdited = false, names = {};
 let workouts = [], draft = null, editing = null, ready = false, loadError = "";
 let hist = { lift: "squat", range: "12", vol: "all" }, progDay = 1;
 const howOpen = new Set(); // exercises whose "How to" is expanded
+let watchHidden = [];       // watch workouts Noah dismissed from History (by start time)
+const fmtTime = iso => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+const watchLine = x => [`${x.mins} min`, x.avgHr ? `avg HR ${x.avgHr}` : "", x.maxHr ? `max ${x.maxHr}` : "", x.cal ? `${x.cal} cal` : ""].filter(Boolean).join(" · ");
 
 const persistDraft = () => db.kvSet("draft", draft ? clone(draft) : undefined).catch(() => toast("Couldn't save. Storage may be full."));
 let progT;
@@ -201,13 +205,21 @@ function exHTML(it, form, scope, ref) {
 function vSheet() {
   const f = editing, d = dayOf(program, f.day) || { n: f.day, name: "Workout", blocks: [] };
   fillForm(f, d);
+  const saved = workouts.some(x => x.id === f.id);
+  const wx = f.watch || (saved ? matchWatch(workouts, watchWorkouts()).byId[f.id] : null);
+  const row = (k, v) => `<div class="cell field"><span class="cell-title">${k}</span><span class="cell-detail tnum">${v}</span></div>`;
+  const watchGroup = wx ? group("From Your Watch", row("Time", `${fmtTime(wx.start)}–${fmtTime(wx.end)}`) + row("Duration", `${wx.mins} min`)
+    + (wx.avgHr ? row("Average heart rate", `${wx.avgHr} bpm`) : "") + (wx.maxHr ? row("Max heart rate", `${wx.maxHr} bpm`) : "")
+    + (wx.cal ? row("Calories", `${wx.cal}`) : "") + (wx.type ? row("Type", esc(wx.type)) : ""), { foot: "From Google Health. Matched by time, or by date when the times don't overlap." }) : "";
   return `<div class="sheetbar"><button type="button" class="link" data-act="closesheet">Cancel</button><div class="sheettitle">Day ${f.day} · ${esc(d.name)}</div><button type="button" class="link bold" data-act="savew">Save</button></div>
     <div class="sbody">
-      ${group("Details", `<label class="cell field"><span class="cell-title">Date</span><input id="eDate" type="date" data-f="edate" value="${esc(f.date)}"></label>
+      ${group("Details", `<div class="cell field">${seg(program.days.map(x => [x.n, "Day " + x.n]), f.day, "eday")}</div>
+        <label class="cell field"><span class="cell-title">Date</span><input id="eDate" type="date" data-f="edate" value="${esc(f.date)}"></label>
         <label class="cell field"><span class="cell-title">Minutes</span><input id="eMins" inputmode="numeric" pattern="[0-9]*" data-f="emins" value="${esc(f.mins ?? "")}" placeholder="—"></label>`)}
+      ${watchGroup}
       ${formBlocks(f, d, "edit")}
       ${group("Notes", `<textarea id="eNote" data-f="note" data-scope="edit">${esc(f.note)}</textarea>`, { cls: "padded" })}
-      ${group("", `<button type="button" class="cell center destructive" data-act="delw"><span class="cell-title">Delete Session</span></button>`)}
+      ${saved ? group("", `<button type="button" class="cell center destructive" data-act="delw"><span class="cell-title">Delete Session</span></button>`) : ""}
     </div>`;
 }
 
@@ -240,6 +252,8 @@ function vHistory() {
   // R5.5 sessions per week
   const cnt = wks.map(k => { const v = workouts.filter(w => weekOf(w.date) === k).length; return { label: wkLabel(k), v, info: `Week of ${fmtDate(k)}: ${v} session${v === 1 ? "" : "s"}` }; });
   const thisWk = cnt[cnt.length - 1].v;
+  const watch = matchWatch(workouts, watchWorkouts()), since = Date.now() - 14 * 864e5;
+  const watchUnlogged = watch.unmatched.filter(x => +new Date(x.start) > since && !watchHidden.includes(x.start));
 
   return `<section class="view">
     ${largeTitle("History", `${workouts.length} session${workouts.length === 1 ? "" : "s"} logged`)}
@@ -260,9 +274,15 @@ function vHistory() {
 
     ${group("Sessions per Week", `${barChart(cnt, { goal: 4, id: "cntOut", showVals: true })}<div class="hint" id="cntOut">Last 12 weeks. Dashed line is the 4-session target.</div>`, { cls: "padded", right: `<span class="gh-r tnum">${thisWk} of 4 this week</span>` })}
 
+    ${watchUnlogged.length ? group("From Your Watch", watchUnlogged.map(x => `<div class="cell watchcell"><button type="button" class="watchbtn" data-act="logwatch" data-start="${esc(x.start)}"><span class="cell-body"><span class="cell-title">${esc(x.type || "Workout")} · ${esc(fmtDate(x.date))}</span><span class="cell-sub tnum">${esc(watchLine(x))}</span></span><span class="cell-detail link-c">Log</span></button><button type="button" class="rbtn" data-act="hidewatch" data-start="${esc(x.start)}" aria-label="Hide this watch workout">✕</button></div>`).join(""),
+      { foot: "Workouts your watch tracked that aren't logged here yet. Tap one to log it." }) : ""}
+
     ${group("Sessions", workouts.map(w => {
       const d = dayOf(program, w.day), main = d ? mainItem(d) : null, t = main ? topSet(w.ex && w.ex[main.id] && w.ex[main.id].sets) : null;
-      const sub = [w.mins ? w.mins + " min" : "", t ? `${esc(main.n)} <span class="tnum">${lb(t.w)}×${t.r}</span>` : ""].filter(Boolean).join(" · ") + (w.note ? `<span class="cell-note">${esc(w.note)}</span>` : "");
+      const wx = watch.byId[w.id];
+      const sub = [wx ? wx.mins + " min" : w.mins ? w.mins + " min" : "", t ? `${esc(main.n)} <span class="tnum">${lb(t.w)}×${t.r}</span>` : ""].filter(Boolean).join(" · ")
+        + (wx && (wx.avgHr || wx.cal) ? `<span class="cell-note watchnote tnum">Watch · ${esc([wx.avgHr ? `avg HR ${wx.avgHr}` : "", wx.maxHr ? `max ${wx.maxHr}` : "", wx.cal ? `${wx.cal} cal` : ""].filter(Boolean).join(" · "))}</span>` : "")
+        + (w.note ? `<span class="cell-note">${esc(w.note)}</span>` : "");
       return cell({ attrs: `data-act="openw" data-id="${esc(w.id)}"`, title: `Day ${w.day} · ${esc(d ? d.name : "Workout")}`, sub, detail: esc(fmtDate(w.date)) });
     }).join(""))}
   </section>`;
@@ -276,6 +296,10 @@ function vSettings() {
   const num1 = (bi, ii, k, label, v, mode = "numeric") => `<label class="mini"><span>${label}</span><input inputmode="${mode}" ${mode === "numeric" ? `pattern="[0-9]*"` : ""} data-f="prog" data-b="${bi}" data-i="${ii}" data-k="${k}" value="${esc(v ?? "")}" placeholder="—"></label>`;
   return `<section class="view">
     ${largeTitle("Settings")}
+    ${group("Google Health", `<label class="cell field"><span class="cell-title">Vitals link</span><input type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" data-f="vlink" value="${esc(V.link)}" placeholder="Paste link"></label>
+      <button type="button" class="cell" data-act="testlink" ${V.link ? "" : "disabled"}><span class="cell-body"><span class="cell-title link-c">Test Link</span></span><span class="cell-detail" id="vstat">${esc(statusText())}</span></button>`,
+      { foot: "The link from your Google script (run showAppLink). It brings in workouts from your watch, and later sleep and recovery data. It stays on this phone." })}
+
     ${group("Backup", `
       <button type="button" class="cell" data-act="export"><span class="sicon blue">${IC.share}</span><span class="cell-body"><span class="cell-title">Export Backup</span></span>${IC.chev}</button>
       <label class="cell"><span class="sicon green">${IC.inbox}</span><span class="cell-body"><span class="cell-title">Import Backup</span></span>${IC.chev}<input type="file" accept="application/json,.json" data-f="import" hidden></label>`,
@@ -346,11 +370,20 @@ async function act(a, el) {
     }
     case "openw": { const w = workouts.find(x => x.id === d.id); if (w) { editing = toForm(w); render(); $("#sheet").scrollTop = 0; } break; }
     case "closesheet": editing = null; render(); break;
+    case "eday": editing.day = +d.v; render(); break;
+    case "logwatch": {
+      const x = watchWorkouts().find(y => y.start === d.start); if (!x) break;
+      const prev = workouts.find(w => w.date <= x.date);
+      editing = { id: uid(), day: prev ? nextDay([prev], program) : program.days[0].n, date: x.date, ts: +new Date(x.end), mins: x.mins, note: "", ex: {}, watch: x };
+      render(); $("#sheet").scrollTop = 0; break;
+    }
+    case "hidewatch": watchHidden.push(d.start); db.kvSet("watchHidden", watchHidden.slice(-200)); render(); break;
+    case "testlink": refreshVitals(); break;
     case "savew": {
       const old = workouts.find(x => x.id === editing.id) || {};
       const mins = parseInt(editing.mins, 10);
-      const rec = { ...old, date: editing.date || old.date, mins: isFinite(mins) ? mins : old.mins, note: editing.note.trim(), ...fromForm(editing) };
-      try { await db.putWorkout(rec); workouts = sortWorkouts(workouts.map(x => x.id === rec.id ? rec : x)); editing = null; toast("Changes saved"); render(); }
+      const rec = { ...old, id: editing.id, day: editing.day, ts: old.ts ?? editing.ts, date: editing.date || old.date, mins: isFinite(mins) ? mins : old.mins, note: editing.note.trim(), ...fromForm(editing) };
+      try { await db.putWorkout(rec); workouts = sortWorkouts(old.id ? workouts.map(x => x.id === rec.id ? rec : x) : [rec, ...workouts]); editing = null; toast(old.id ? "Changes saved" : "Session added"); render(); }
       catch { toast("Couldn't save. Try again."); }
       break;
     }
@@ -470,6 +503,7 @@ document.addEventListener("focusin", e => { if (e.target.dataset.k === "r") e.ta
 
 document.addEventListener("change", e => {
   const el = e.target;
+  if (el.dataset.f === "vlink") { setLink(el.value); return; }
   if (el.dataset.f === "set" && el.dataset.k === "r" && el.dataset.scope === "draft" && el.dataset.was === "" && num(el.value) != null) {
     const it = itemsOf(dayOf(program, draft.day)).find(i => i.id === el.dataset.id), sets = draft.ex[el.dataset.id].sets;
     el.dataset.was = el.value;
@@ -554,6 +588,9 @@ async function fetchJSON(url) { const r = await fetch(url, { cache: "no-cache" }
     ready = true;
     render();
     initTimer(savedTimer, t => db.kvSet("timer", t ? clone(t) : undefined));
+    watchHidden = (await db.kvGet("watchHidden")) || [];
+    // Re-render when vitals arrive, unless Noah is typing (then just refresh the status line).
+    initVitals(() => { const st = $("#vstat"); if (st) st.textContent = statusText(); if (!document.activeElement.matches("input,textarea")) render(); });
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   } catch (e) {
     loadError = "This browser blocked storage, so sessions can't be saved. Open the app from your Home Screen or turn off Private Browsing.";
