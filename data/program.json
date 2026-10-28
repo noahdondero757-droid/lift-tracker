@@ -510,7 +510,8 @@
               "n": "Med ball rotational throws",
               "t": "rounds",
               "rounds": 3,
-              "note": "5 each side · max intent"
+              "note": "5 each side · max intent",
+              "wt": true
             },
             {
               "id": "pallof",

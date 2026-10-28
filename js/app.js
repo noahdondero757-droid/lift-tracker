@@ -526,7 +526,11 @@ async function fetchJSON(url) { const r = await fetch(url, { cache: "no-cache" }
       const defs = {};
       for (const d of defaultProgram.days) for (const it of itemsOf(d)) defs[it.id] = it;
       for (const d of program.days) for (const it of itemsOf(d)) if (it.rest === undefined && defs[it.id] && defs[it.id].rest) it.rest = defs[it.id].rest;
-      if (base && fetched && mergeDefaults(program, base, defaultProgram)) db.kvSet("program", clone(program));
+      let fixed = base && fetched && mergeDefaults(program, base, defaultProgram);
+      // One-time fix: programs edited before update tracking existed missed the Pallof press note change.
+      const newPallof = itemsOf(defaultProgram.days.find(x => x.n === 2) || { blocks: [] }).find(i => i.id === "pallof");
+      for (const d of program.days) for (const it of itemsOf(d)) if (it.id === "pallof" && it.note === "3×10 each side" && newPallof && newPallof.note !== it.note) { it.note = newPallof.note; fixed = true; }
+      if (fixed) db.kvSet("program", clone(program));
     }
     // Remember which default the phone last saw, so later changes to program.json can be merged in.
     if (fetched) db.kvSet("programBase", defaultProgram);
