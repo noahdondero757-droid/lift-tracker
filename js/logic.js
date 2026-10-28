@@ -104,7 +104,7 @@ export function toForm(w) {
   for (const [id, e] of Object.entries(w.ex || {})) {
     if (e.sets) ex[id] = { sets: e.sets.map(s => ({ w: String(s.w ?? ""), r: String(s.r ?? "") })) };
     else if (e.rounds != null) ex[id] = { rounds: Array.from({ length: Math.max(e.of || 0, e.rounds) }, (_, i) => i < e.rounds), w: String(e.w ?? "") };
-    else ex[id] = { done: !!e.done };
+    else ex[id] = { done: !!e.done, w: String(e.w ?? "") };
   }
   return { id: w.id, day: w.day, date: w.date, ts: w.ts, mins: w.mins, note: w.note || "", ex };
 }
@@ -115,7 +115,7 @@ export function fillForm(form, day) {
     if (form.ex[it.id]) continue;
     if (it.t === "sets") form.ex[it.id] = { sets: Array.from({ length: it.sets || 1 }, () => ({ w: "", r: "" })) };
     else if (it.t === "rounds") form.ex[it.id] = { rounds: Array(it.rounds || 1).fill(false), w: "" };
-    else form.ex[it.id] = { done: false };
+    else form.ex[it.id] = { done: false, w: "" };
   }
   return form;
 }
@@ -130,7 +130,7 @@ export function fromForm(form) {
   for (const [id, e] of Object.entries(form.ex)) {
     if (e.sets) { const s = e.sets.filter(x => x.r !== "" || x.w !== ""); if (s.length) ex[id] = { sets: s }; }
     else if (e.rounds) { const n = e.rounds.filter(Boolean).length; if (n || e.w) ex[id] = { rounds: n, of: e.rounds.length, ...(e.w ? { w: e.w } : {}) }; }
-    else if (e.done) ex[id] = { done: true };
+    else if (e.done || e.w) ex[id] = { done: !!e.done, ...(e.w ? { w: e.w } : {}) };
   }
   return { ex };
 }

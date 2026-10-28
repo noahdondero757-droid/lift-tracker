@@ -172,6 +172,9 @@ function formBlocks(form, d, scope) {
 function exHTML(it, form, scope, ref) {
   const e = form.ex[it.id] || {}, sc = `data-scope="${scope}" data-id="${esc(it.id)}"`;
   const note = it.note ? `<span class="cell-detail">${esc(it.note)}</span>` : "";
+  const wbox = cls => `<label class="rw ${cls}"><span>Weight</span><input inputmode="decimal" autocomplete="off" data-f="rw" ${sc} value="${esc(e.w || "")}" placeholder="${esc(lastWeight(workouts, it.id, ref))}" aria-label="${esc(it.n)} weight in pounds"><span class="rw-u">lb</span></label>`;
+  if (it.t === "check" && it.wt)
+    return `<div class="cell checkcell wtcheck ${e.done ? "on" : ""}"><button type="button" class="checkbtn" data-act="check" ${sc} aria-pressed="${!!e.done}"><span class="circle" aria-hidden="true"></span><span class="cell-body"><span class="cell-title">${esc(it.n)}</span>${it.note ? `<span class="cell-sub">${esc(it.note)}</span>` : ""}</span></button>${wbox("compact")}</div>`;
   if (it.t === "check")
     return `<button type="button" class="cell checkcell ${e.done ? "on" : ""}" data-act="check" ${sc} aria-pressed="${!!e.done}"><span class="circle" aria-hidden="true"></span><span class="cell-body"><span class="cell-title">${esc(it.n)}</span></span>${note}</button>`;
   const open = howOpen.has(it.id);
@@ -179,7 +182,7 @@ function exHTML(it, form, scope, ref) {
   const head = `<div class="item-head"><span class="cell-title">${esc(it.n)}</span>${note}</div>${how}`;
   if (it.t === "rounds") {
     const r = e.rounds || [], done = r.filter(Boolean).length;
-    const wt = it.wt ? `<label class="rw"><span>Weight</span><input inputmode="decimal" autocomplete="off" data-f="rw" ${sc} value="${esc(e.w || "")}" placeholder="${esc(lastWeight(workouts, it.id, ref))}" aria-label="${esc(it.n)} weight in pounds"><span class="rw-u">lb</span></label>` : "";
+    const wt = it.wt ? wbox("") : "";
     return `<div class="item">${head}${wt}<div class="pips">${r.map((on, i) => `<button type="button" class="pip ${on ? "on" : ""}" data-act="pip" ${sc} data-i="${i}" aria-pressed="${on}" aria-label="Round ${i + 1}">${i + 1}</button>`).join("")}<button type="button" class="pip add" data-act="addpip" ${sc} aria-label="Add round">+</button></div><div class="item-foot tnum">${done} of ${r.length} rounds</div></div>`;
   }
   const prev = lastSets(workouts, it.id, ref) || [];
@@ -280,7 +283,7 @@ function vSettings() {
 
     ${group("Program", `${seg(program.days.map(x => [x.n, "Day " + x.n]), d.n, "progday")}
       <label class="field-row"><span>Day name</span><input data-f="prog" data-k="dayname" value="${esc(d.name)}"></label>`,
-      { cls: "padded", right: programEdited ? `<button class="link" type="button" data-act="resetprog">Reset to Default</button>` : "", foot: `Changes save automatically. "+lb" is the weight added after you hit every set and rep (blank = no auto progression). "Rest" starts a timer in seconds each time you log a set's reps. "Weight" adds a pounds box to a rounds exercise, like a carry.` })}
+      { cls: "padded", right: programEdited ? `<button class="link" type="button" data-act="resetprog">Reset to Default</button>` : "", foot: `Changes save automatically. "+lb" is the weight added after you hit every set and rep (blank = no auto progression). "Rest" starts a timer in seconds each time you log a set's reps. "Weight" adds a pounds box to a rounds or checkbox exercise, like a carry or a rehab raise.` })}
 
     ${d.blocks.map((b, bi) => group("", `
       <div class="eblock"><input class="eb-name" data-f="prog" data-b="${bi}" data-k="label" value="${esc(b.label)}" aria-label="Block name">
@@ -292,7 +295,8 @@ function vSettings() {
           <span class="rbtns">${ib("pi", "up", bi, ii, IC.up, "Move up", bi === 0 && ii === 0)}${ib("pi", "down", bi, ii, IC.down, "Move down", bi === d.blocks.length - 1 && ii === b.items.length - 1)}${ib("pi", "del", bi, ii, IC.trash, "Remove exercise", false, "destructive")}</span></div>
         <div class="ei-fields"><span class="tag">${TYPE[it.t]}</span>
           ${it.t === "sets" ? num1(bi, ii, "sets", "Sets", it.sets) + num1(bi, ii, "reps", "Reps", it.reps) + num1(bi, ii, "inc", "+lb", (program.progression || {})[it.id], "decimal") + num1(bi, ii, "rest", "Rest", it.rest || "") : ""}
-          ${it.t === "rounds" ? num1(bi, ii, "rounds", "Rounds", it.rounds) + `<label class="mini sw"><span>Weight</span><input type="checkbox" role="switch" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="wt" ${it.wt ? "checked" : ""} aria-label="Log a weight for this exercise"></label>` : ""}</div>
+          ${it.t === "rounds" ? num1(bi, ii, "rounds", "Rounds", it.rounds) : ""}
+          ${it.t !== "sets" ? `<label class="mini sw"><span>Weight</span><input type="checkbox" role="switch" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="wt" ${it.wt ? "checked" : ""} aria-label="Log a weight for this exercise"></label>` : ""}</div>
         <input class="ei-note" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="note" value="${esc(it.note || "")}" placeholder="Note, e.g. 4×5 · 2 min rest" aria-label="Note">
         ${it.t === "check" ? "" : `<textarea class="ei-how" rows="2" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="how" placeholder="How to do it (optional)" aria-label="How to do it">${esc(it.how || "")}</textarea>`}
       </div>`).join("")}

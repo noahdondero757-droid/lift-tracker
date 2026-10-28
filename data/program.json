@@ -295,7 +295,8 @@
               "id": "serratus",
               "n": "Serratus punches",
               "t": "check",
-              "note": "2×12"
+              "note": "2×12",
+              "wt": true
             }
           ]
         }
@@ -559,13 +560,15 @@
               "id": "trap3",
               "n": "Trap 3 raises",
               "t": "check",
-              "note": "2×10"
+              "note": "2×10",
+              "wt": true
             },
             {
               "id": "sideer",
               "n": "Side-lying ER",
               "t": "check",
-              "note": "2×12 each arm"
+              "note": "2×12 each arm",
+              "wt": true
             }
           ]
         }

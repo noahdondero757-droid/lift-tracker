@@ -269,3 +269,11 @@ nav.tabs button[aria-current="page"]{color:var(--blue)}
 .howbtn .ic{width:17px;height:17px}
 .how{font-size:15px;line-height:1.4;color:var(--label);background:var(--fill);border-radius:10px;padding:10px 12px;letter-spacing:-.24px}
 .ei-how{font-size:15px;color:var(--label2);background:var(--fill);border-radius:8px;padding:8px 10px;min-height:0;line-height:1.35}
+/* checkbox exercise with a weight box (rehab raises) */
+.wtcheck{cursor:default;gap:10px;padding-block:6px}
+.wtcheck:active{background:var(--card)}
+.checkbtn{display:flex;align-items:center;gap:12px;flex:1;min-width:0;min-height:44px;text-align:left}
+.rw.compact{gap:6px;flex:none}
+.rw.compact>span:first-child{display:none}
+.rw.compact input{width:72px}
+.wtcheck.on .cell-title{color:var(--label2)}
