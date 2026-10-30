@@ -733,6 +733,18 @@ function mergeDefaults(prog, base, next) {
     const was = bd && bd.blocks[i], now = nd && nd.blocks[i];
     if (was && now && was.label === bl.label && now.label === bl.label && bl.about === was.about && now.about !== was.about) { bl.about = now.about; changed = true; }
   });
+  // Blocks added to the default program (e.g. a new "Hips" block) that this phone hasn't seen yet.
+  for (const nd of next.days) {
+    const bd = base.days.find(x => x.n === nd.n), pd = prog.days.find(x => x.n === nd.n);
+    if (!bd || !pd) continue;
+    nd.blocks.forEach((nb, i) => {
+      if (bd.blocks.some(x => x.label === nb.label) || pd.blocks.some(x => x.label === nb.label)) return;
+      const have = new Set(itemsOf(pd).map(it => it.id));
+      const copy = JSON.parse(JSON.stringify(nb)); copy.items = copy.items.filter(it => !have.has(it.id));
+      if (!copy.items.length) return;
+      pd.blocks.splice(Math.min(i, pd.blocks.length), 0, copy); changed = true;
+    });
+  }
   const bp = base.progression || {}, np = next.progression || {};
   prog.progression = prog.progression || {};
   for (const id of Object.keys(np)) if (prog.progression[id] === bp[id] && np[id] !== bp[id]) { prog.progression[id] = np[id]; changed = true; }

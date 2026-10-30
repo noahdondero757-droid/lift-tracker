@@ -171,6 +171,73 @@
               "note": "10 sec all-out · 50 sec easy"
             }
           ]
+        },
+        {
+          "label": "Hips · strength + mobility",
+          "timer": {
+            "label": "Copenhagen 20s holds",
+            "ph": [
+              [
+                "Left side",
+                20
+              ],
+              [
+                "Switch",
+                15
+              ],
+              [
+                "Right side",
+                20
+              ],
+              [
+                "Rest",
+                30
+              ]
+            ],
+            "rep": 2
+          },
+          "about": "Strength first, stretches last. About 12 minutes.",
+          "items": [
+            {
+              "id": "copenhagen",
+              "n": "Copenhagen side plank (short lever)",
+              "t": "rounds",
+              "rounds": 2,
+              "note": "2 × 20 sec each side",
+              "how": "Lie on your side with your top knee on a bench and your bottom leg underneath. Push up onto your forearm and lift your hips into a straight line. Squeeze your top knee down into the bench and hold. Too hard: lower the bench. Too easy: add 5 sec."
+            },
+            {
+              "id": "cossack",
+              "n": "Cossack squat",
+              "t": "sets",
+              "sets": 2,
+              "reps": 6,
+              "note": "2 × 6 each side · bodyweight to start",
+              "how": "Take a wide stance. Sit down into one hip while the other leg stays straight with its toes up. Keep your heel down and chest up, go as deep as you can control, then push back to the middle and switch sides. Hold a light dumbbell at your chest once 6 per side feels easy."
+            },
+            {
+              "id": "hipairplane",
+              "n": "Hip airplanes",
+              "t": "rounds",
+              "rounds": 2,
+              "note": "2 × 5 each side · slow",
+              "how": "Stand on one leg with a slight knee bend and hinge forward until your torso is near level, holding a rack with one hand. Rotate your hips open toward the ceiling, then closed toward the floor, while keeping the standing knee still. Take 2–3 sec each way."
+            },
+            {
+              "id": "ninety90",
+              "n": "90/90 switches",
+              "t": "check",
+              "note": "1 × 8",
+              "how": "Sit with both knees bent at 90°, one leg in front and one to the side. Keep your feet planted, rotate both knees to the other side, and sit tall. Use your hands behind you if needed."
+            },
+            {
+              "id": "couch",
+              "n": "Couch stretch",
+              "t": "check",
+              "note": "45 sec each side",
+              "how": "Put your back knee on a pad with that foot up against a wall or bench, and your front foot flat. Squeeze the glute of the back leg and stay upright. You should feel it in the front of the hip and thigh, not the low back."
+            }
+          ]
         }
       ]
     },
