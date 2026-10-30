@@ -137,6 +137,21 @@ export function dpTarget(workouts, item, ref) {
   return null;
 }
 
+// Weight progression for a rounds/checkbox item that logs a weight (carries, sled).
+// item.wprog = { inc }. Every round done at a weight → next time add inc. Otherwise repeat.
+export function wTarget(workouts, item, ref) {
+  const P = item.wprog;
+  if (!P) return null;
+  for (const w of workouts) {
+    if (ref && w.id === ref.id) continue;
+    const e = w.ex && w.ex[item.id], wt = e ? num(e.w) : null;
+    if (!e || !wt) continue;
+    const full = e.rounds != null ? e.rounds >= (e.of || item.rounds || 1) : !!e.done;
+    return full ? { w: wt + P.inc, up: true, last: wt } : { w: wt, up: false, last: wt };
+  }
+  return null;
+}
+
 // Turn a stored workout into an editable form (rounds as arrays of booleans).
 export function toForm(w) {
   const ex = {};

@@ -128,7 +128,12 @@
               "t": "sets",
               "sets": 4,
               "reps": 8,
-              "note": "4×8 each leg"
+              "note": "4×8–12 each leg",
+              "dp": {
+                "min": 8,
+                "max": 12,
+                "inc": 5
+              }
             },
             {
               "id": "jumprope",
@@ -225,7 +230,8 @@
               "dp": {
                 "min": 6,
                 "max": 10,
-                "inc": 5
+                "inc": 5,
+                "bw": true
               }
             },
             {
@@ -319,16 +325,26 @@
               "n": "Chest supported row",
               "t": "sets",
               "sets": 3,
-              "reps": 10,
-              "note": "3×10"
+              "reps": 8,
+              "note": "3×8–12",
+              "dp": {
+                "min": 8,
+                "max": 12,
+                "inc": 5
+              }
             },
             {
               "id": "smith",
               "n": "Smith press",
               "t": "sets",
               "sets": 3,
-              "reps": 8,
-              "note": "3×8"
+              "reps": 6,
+              "note": "3×6–10",
+              "dp": {
+                "min": 6,
+                "max": 10,
+                "inc": 5
+              }
             },
             {
               "id": "facepull",
@@ -348,16 +364,26 @@
               "n": "Tricep pushdown",
               "t": "sets",
               "sets": 3,
-              "reps": 12,
-              "note": "3×12"
+              "reps": 10,
+              "note": "3×10–15",
+              "dp": {
+                "min": 10,
+                "max": 15,
+                "inc": 5
+              }
             },
             {
               "id": "latraise",
               "n": "Cable lateral raise",
               "t": "sets",
               "sets": 3,
-              "reps": 15,
-              "note": "3×15 · 70–75°"
+              "reps": 12,
+              "note": "3×12–20 · 70–75°",
+              "dp": {
+                "min": 12,
+                "max": 20,
+                "inc": 2.5
+              }
             },
             {
               "id": "pallof",
@@ -465,7 +491,10 @@
               "rounds": 3,
               "note": "40 yd · heavy",
               "wt": true,
-              "how": "Hold a heavy dumbbell or handle in each hand. Stand tall, shoulders back, brace your stomach. Walk 40 yd with short, quick steps without setting them down. Pick a weight that's hard to hold by the end. Log the weight in one hand."
+              "how": "Hold a heavy dumbbell or handle in each hand. Stand tall, shoulders back, brace your stomach. Walk 40 yd with short, quick steps without setting them down. Pick a weight that's hard to hold by the end. Log the weight in one hand.",
+              "wprog": {
+                "inc": 10
+              }
             },
             {
               "id": "suitcase",
@@ -474,7 +503,10 @@
               "rounds": 3,
               "note": "20 yd each side",
               "wt": true,
-              "how": "One weight in one hand only. Walk 20 yd without leaning toward the weight: stay level, as if it weren't there. Switch hands and walk 20 yd back. That's one round. It trains your core to resist bending sideways."
+              "how": "One weight in one hand only. Walk 20 yd without leaning toward the weight: stay level, as if it weren't there. Switch hands and walk 20 yd back. That's one round. It trains your core to resist bending sideways.",
+              "wprog": {
+                "inc": 5
+              }
             }
           ],
           "about": "Why the clock: it sets your pace. Each time a new 2-minute round starts, do one farmer's carry and one suitcase carry (both hands), then rest for whatever's left of the 2 minutes. 3 rounds. It keeps rest short enough to stay honest but long enough to carry heavy."
@@ -489,7 +521,10 @@
               "rounds": 4,
               "note": "Push 20 yd, drag 20 yd back",
               "wt": true,
-              "how": "One round = push the sled 20 yd, then drag it 20 yd back to the start. Push: hands on the handles, arms straight, body leaning in, drive with short powerful steps. Drag: hold the straps or handles, face the sled and walk backward, staying low in your legs. No sled? Do 10 walking lunges each leg per round. Log the weight you put on the sled."
+              "how": "One round = push the sled 20 yd, then drag it 20 yd back to the start. Push: hands on the handles, arms straight, body leaning in, drive with short powerful steps. Drag: hold the straps or handles, face the sled and walk backward, staying low in your legs. No sled? Do 10 walking lunges each leg per round. Log the weight you put on the sled.",
+              "wprog": {
+                "inc": 20
+              }
             }
           ],
           "about": "No clock here. Rest about 60–90 sec between rounds, enough to push hard every time."
@@ -578,7 +613,13 @@
               "t": "sets",
               "sets": 5,
               "reps": 5,
-              "note": "5×5 · weight = added load"
+              "note": "5×5–8 · weight = added load",
+              "dp": {
+                "min": 5,
+                "max": 8,
+                "inc": 5,
+                "bw": true
+              }
             },
             {
               "id": "cablerow",
@@ -586,7 +627,12 @@
               "t": "sets",
               "sets": 5,
               "reps": 8,
-              "note": "5×8"
+              "note": "5×8–12",
+              "dp": {
+                "min": 8,
+                "max": 12,
+                "inc": 5
+              }
             }
           ]
         },
@@ -619,16 +665,26 @@
               "n": "Lat pullover",
               "t": "sets",
               "sets": 3,
-              "reps": 12,
-              "note": "3×12"
+              "reps": 10,
+              "note": "3×10–15",
+              "dp": {
+                "min": 10,
+                "max": 15,
+                "inc": 5
+              }
             },
             {
               "id": "reardelt",
               "n": "Rear delt fly",
               "t": "sets",
               "sets": 3,
-              "reps": 15,
-              "note": "3×15"
+              "reps": 12,
+              "note": "3×12–20",
+              "dp": {
+                "min": 12,
+                "max": 20,
+                "inc": 2.5
+              }
             },
             {
               "id": "facepull",

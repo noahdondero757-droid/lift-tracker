@@ -5,7 +5,7 @@ import { V, initVitals, setLink, refreshVitals, statusText, watchWorkouts } from
 import * as H from "./health.js";
 import {
   MAIN, pad, ymd, today, parseD, num, uid, weekOf, sortWorkouts, nextDay, dayOf, itemsOf, mainItem,
-  lastSets, lastWeight, matchWatch, topSet, target, ladderTarget, dpTarget, toForm, fillForm, newDraft, fromForm, volume, lastWeeks,
+  lastSets, lastWeight, matchWatch, topSet, target, ladderTarget, dpTarget, wTarget, toForm, fillForm, newDraft, fromForm, volume, lastWeeks,
 } from "./logic.js";
 
 /* ---------- utils ---------- */
@@ -186,9 +186,11 @@ function formBlocks(form, d, scope) {
 function exHTML(it, form, scope, ref) {
   const e = form.ex[it.id] || {}, sc = `data-scope="${scope}" data-id="${esc(it.id)}"`;
   const note = it.note ? `<span class="cell-detail">${esc(it.note)}</span>` : "";
-  const wbox = cls => `<label class="rw ${cls}"><span>Weight</span><input inputmode="decimal" autocomplete="off" data-f="rw" ${sc} value="${esc(e.w || "")}" placeholder="${esc(lastWeight(workouts, it.id, ref))}" aria-label="${esc(it.n)} weight in pounds"><span class="rw-u">lb</span></label>`;
+  const wt_ = scope === "draft" ? wTarget(workouts, it, ref) : null;
+  const wtTxt = wt_ ? `<div class="target ${wt_.up ? "up" : ""}">${wt_.up ? IC.arrowUp : ""}<span>${wt_.up ? `Go up: ${lb(wt_.w)} lb (+${it.wprog.inc})` : `Repeat ${lb(wt_.w)} lb · finish every round to go up`}</span></div>` : scope === "draft" && it.wprog ? `<div class="target"><span>Log the weight you use. Finish every round and it adds ${it.wprog.inc} lb next time.</span></div>` : "";
+  const wbox = cls => `<label class="rw ${cls}"><span>Weight</span><input inputmode="decimal" autocomplete="off" data-f="rw" ${sc} value="${esc(e.w || "")}" placeholder="${esc(wt_ ? wt_.w : lastWeight(workouts, it.id, ref))}" aria-label="${esc(it.n)} weight in pounds"><span class="rw-u">lb</span></label>`;
   if (it.t === "check" && it.wt)
-    return `<div class="cell checkcell wtcheck ${e.done ? "on" : ""}"><button type="button" class="checkbtn" data-act="check" ${sc} aria-pressed="${!!e.done}"><span class="circle" aria-hidden="true"></span><span class="cell-body"><span class="cell-title">${esc(it.n)}</span>${it.note ? `<span class="cell-sub">${esc(it.note)}</span>` : ""}</span></button>${wbox("compact")}</div>`;
+    return `<div class="cell checkcell wtcheck ${e.done ? "on" : ""}"><button type="button" class="checkbtn" data-act="check" ${sc} aria-pressed="${!!e.done}"><span class="circle" aria-hidden="true"></span><span class="cell-body"><span class="cell-title">${esc(it.n)}</span>${it.note ? `<span class="cell-sub">${esc(it.note)}</span>` : ""}</span></button>${wbox("compact")}${wtTxt}</div>`;
   if (it.t === "check")
     return `<button type="button" class="cell checkcell ${e.done ? "on" : ""}" data-act="check" ${sc} aria-pressed="${!!e.done}"><span class="circle" aria-hidden="true"></span><span class="cell-body"><span class="cell-title">${esc(it.n)}</span></span>${note}</button>`;
   const open = howOpen.has(it.id);
@@ -199,12 +201,12 @@ function exHTML(it, form, scope, ref) {
     const wt = it.wt ? wbox("") : "";
     const lt = ladderTarget(workouts, it, ref);
     const ltxt = lt ? `<div class="target ${lt.up ? "up" : ""}">${lt.up ? IC.arrowUp : ""}<span>${lt.first ? "Start at" : "Today:"} ${lt.val}${lt.unit} · ${lt.maxed ? (lt.then || "top of the range, hold here") : `+${it.ladder.step}${lt.unit} next time if you finish every round`}</span></div>` : "";
-    return `<div class="item">${head}${ltxt}${wt}<div class="pips">${r.map((on, i) => `<button type="button" class="pip ${on ? "on" : ""}" data-act="pip" ${sc} data-i="${i}" aria-pressed="${on}" aria-label="Round ${i + 1}">${i + 1}</button>`).join("")}<button type="button" class="pip add" data-act="addpip" ${sc} aria-label="Add round">+</button></div><div class="item-foot tnum">${done} of ${r.length} rounds</div></div>`;
+    return `<div class="item">${head}${ltxt}${wtTxt}${wt}<div class="pips">${r.map((on, i) => `<button type="button" class="pip ${on ? "on" : ""}" data-act="pip" ${sc} data-i="${i}" aria-pressed="${on}" aria-label="Round ${i + 1}">${i + 1}</button>`).join("")}<button type="button" class="pip add" data-act="addpip" ${sc} aria-label="Add round">+</button></div><div class="item-foot tnum">${done} of ${r.length} rounds</div></div>`;
   }
   const prev = lastSets(workouts, it.id, ref) || [];
   const tg = scope === "draft" ? target(workouts, program, it) : null;
   const dp = scope === "draft" ? dpTarget(workouts, it, ref) : null;
-  const dpTxt = dp ? `<div class="target ${dp.up ? "up" : ""}">${dp.up ? IC.arrowUp : ""}<span>${dp.up === "weight" ? `Add weight: ${lb(dp.w)} lb × ${dp.r}` : `Target ${dp.w ? lb(dp.w) + " lb" : "bodyweight"} × ${dp.r}`} · at ${it.dp.max} reps every set, add ${it.dp.inc} lb</span></div>` : scope === "draft" && it.dp ? `<div class="target"><span>Start at bodyweight × ${it.dp.min} · add a rep each time, and at ${it.dp.max} add ${it.dp.inc} lb</span></div>` : "";
+  const dpTxt = dp ? `<div class="target ${dp.up ? "up" : ""}">${dp.up ? IC.arrowUp : ""}<span>${dp.up === "weight" ? `Add weight: ${lb(dp.w)} lb × ${dp.r}` : `Target ${dp.w ? lb(dp.w) + " lb" : "bodyweight"} × ${dp.r}`} · at ${it.dp.max} reps every set, add ${it.dp.inc} lb</span></div>` : scope === "draft" && it.dp ? `<div class="target"><span>${it.dp.bw ? `Start at bodyweight × ${it.dp.min}` : `Start with a weight you can do for ${it.dp.min} clean reps`} · add a rep each time, and at ${it.dp.max} add ${it.dp.inc} lb</span></div>` : "";
   const rest = scope === "draft" && it.rest > 0 ? `<div class="item-foot">${fmtClock(it.rest * 1000)} rest starts when you log a set's reps</div>` : "";
   return `<div class="item">${head}${targetText(it, tg)}${dpTxt}${rest}<div class="sets"><span class="h">Set</span><span class="h">lb</span><span class="h">Reps</span>
     ${(e.sets || []).map((s, i) => {
@@ -724,7 +726,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 // Apply changes made to data/program.json since `base` to an in-app edited program, field by field,
 // leaving alone anything Noah changed himself. Returns true if anything changed.
 function mergeDefaults(prog, base, next) {
-  const FIELDS = ["n", "sets", "reps", "rounds", "note", "rest", "wt", "how", "ladder", "dp"], key = (d, it) => d.n + ":" + it.id;
+  const FIELDS = ["n", "sets", "reps", "rounds", "note", "rest", "wt", "how", "ladder", "dp", "wprog"], key = (d, it) => d.n + ":" + it.id;
   const idx = p => { const m = {}; for (const d of p.days) for (const it of itemsOf(d)) m[key(d, it)] = it; return m; };
   const b = idx(base), n = idx(next);
   let changed = false;
