@@ -175,7 +175,8 @@
         {
           "label": "Hips · strength + mobility",
           "timer": {
-            "label": "Copenhagen 20s holds",
+            "label": "Copenhagen holds",
+            "holdFrom": "copenhagen",
             "ph": [
               [
                 "Left side",
@@ -203,8 +204,15 @@
               "n": "Copenhagen side plank (short lever)",
               "t": "rounds",
               "rounds": 2,
-              "note": "2 × 20 sec each side",
-              "how": "Lie on your side with your top knee on a bench and your bottom leg underneath. Push up onto your forearm and lift your hips into a straight line. Squeeze your top knee down into the bench and hold. Too hard: lower the bench. Too easy: add 5 sec."
+              "note": "2 rounds each side",
+              "how": "Lie on your side with your top knee on a bench and your bottom leg underneath. Push up onto your forearm and lift your hips into a straight line. Squeeze your top knee down into the bench and hold. Too hard: lower the bench. Too easy: add 5 sec.",
+              "ladder": {
+                "start": 20,
+                "step": 5,
+                "max": 45,
+                "unit": " sec",
+                "then": "45 sec reached: switch to long lever (foot on the bench) at 20 sec"
+              }
             },
             {
               "id": "cossack",
@@ -212,16 +220,28 @@
               "t": "sets",
               "sets": 2,
               "reps": 6,
-              "note": "2 × 6 each side · bodyweight to start",
-              "how": "Take a wide stance. Sit down into one hip while the other leg stays straight with its toes up. Keep your heel down and chest up, go as deep as you can control, then push back to the middle and switch sides. Hold a light dumbbell at your chest once 6 per side feels easy."
+              "note": "2 sets × 6–10 each side",
+              "how": "Take a wide stance. Sit down into one hip while the other leg stays straight with its toes up. Keep your heel down and chest up, go as deep as you can control, then push back to the middle and switch sides. Hold a light dumbbell at your chest once 6 per side feels easy.",
+              "dp": {
+                "min": 6,
+                "max": 10,
+                "inc": 5
+              }
             },
             {
               "id": "hipairplane",
               "n": "Hip airplanes",
               "t": "rounds",
               "rounds": 2,
-              "note": "2 × 5 each side · slow",
-              "how": "Stand on one leg with a slight knee bend and hinge forward until your torso is near level, holding a rack with one hand. Rotate your hips open toward the ceiling, then closed toward the floor, while keeping the standing knee still. Take 2–3 sec each way."
+              "note": "2 rounds each side · slow",
+              "how": "Stand on one leg with a slight knee bend and hinge forward until your torso is near level, holding a rack with one hand. Rotate your hips open toward the ceiling, then closed toward the floor, while keeping the standing knee still. Take 2–3 sec each way.",
+              "ladder": {
+                "start": 5,
+                "step": 1,
+                "max": 8,
+                "unit": " reps",
+                "then": "8 reps reached: hold a 5–10 lb plate at your chest and drop back to 5"
+              }
             },
             {
               "id": "ninety90",

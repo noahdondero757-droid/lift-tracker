@@ -5,7 +5,7 @@ import { V, initVitals, setLink, refreshVitals, statusText, watchWorkouts } from
 import * as H from "./health.js";
 import {
   MAIN, pad, ymd, today, parseD, num, uid, weekOf, sortWorkouts, nextDay, dayOf, itemsOf, mainItem,
-  lastSets, lastWeight, matchWatch, topSet, target, toForm, fillForm, newDraft, fromForm, volume, lastWeeks,
+  lastSets, lastWeight, matchWatch, topSet, target, ladderTarget, dpTarget, toForm, fillForm, newDraft, fromForm, volume, lastWeeks,
 } from "./logic.js";
 
 /* ---------- utils ---------- */
@@ -197,17 +197,21 @@ function exHTML(it, form, scope, ref) {
   if (it.t === "rounds") {
     const r = e.rounds || [], done = r.filter(Boolean).length;
     const wt = it.wt ? wbox("") : "";
-    return `<div class="item">${head}${wt}<div class="pips">${r.map((on, i) => `<button type="button" class="pip ${on ? "on" : ""}" data-act="pip" ${sc} data-i="${i}" aria-pressed="${on}" aria-label="Round ${i + 1}">${i + 1}</button>`).join("")}<button type="button" class="pip add" data-act="addpip" ${sc} aria-label="Add round">+</button></div><div class="item-foot tnum">${done} of ${r.length} rounds</div></div>`;
+    const lt = ladderTarget(workouts, it, ref);
+    const ltxt = lt ? `<div class="target ${lt.up ? "up" : ""}">${lt.up ? IC.arrowUp : ""}<span>${lt.first ? "Start at" : "Today:"} ${lt.val}${lt.unit} · ${lt.maxed ? (lt.then || "top of the range, hold here") : `+${it.ladder.step}${lt.unit} next time if you finish every round`}</span></div>` : "";
+    return `<div class="item">${head}${ltxt}${wt}<div class="pips">${r.map((on, i) => `<button type="button" class="pip ${on ? "on" : ""}" data-act="pip" ${sc} data-i="${i}" aria-pressed="${on}" aria-label="Round ${i + 1}">${i + 1}</button>`).join("")}<button type="button" class="pip add" data-act="addpip" ${sc} aria-label="Add round">+</button></div><div class="item-foot tnum">${done} of ${r.length} rounds</div></div>`;
   }
   const prev = lastSets(workouts, it.id, ref) || [];
   const tg = scope === "draft" ? target(workouts, program, it) : null;
+  const dp = scope === "draft" ? dpTarget(workouts, it, ref) : null;
+  const dpTxt = dp ? `<div class="target ${dp.up ? "up" : ""}">${dp.up ? IC.arrowUp : ""}<span>${dp.up === "weight" ? `Add weight: ${lb(dp.w)} lb × ${dp.r}` : `Target ${dp.w ? lb(dp.w) + " lb" : "bodyweight"} × ${dp.r}`} · at ${it.dp.max} reps every set, add ${it.dp.inc} lb</span></div>` : scope === "draft" && it.dp ? `<div class="target"><span>Start at bodyweight × ${it.dp.min} · add a rep each time, and at ${it.dp.max} add ${it.dp.inc} lb</span></div>` : "";
   const rest = scope === "draft" && it.rest > 0 ? `<div class="item-foot">${fmtClock(it.rest * 1000)} rest starts when you log a set's reps</div>` : "";
-  return `<div class="item">${head}${targetText(it, tg)}${rest}<div class="sets"><span class="h">Set</span><span class="h">lb</span><span class="h">Reps</span>
+  return `<div class="item">${head}${targetText(it, tg)}${dpTxt}${rest}<div class="sets"><span class="h">Set</span><span class="h">lb</span><span class="h">Reps</span>
     ${(e.sets || []).map((s, i) => {
       const p = prev[i] || prev[prev.length - 1] || {};
       return `<span class="i tnum">${i + 1}</span>
-      <input inputmode="decimal" enterkeyhint="next" autocomplete="off" data-f="set" ${sc} data-i="${i}" data-k="w" value="${esc(s.w)}" placeholder="${esc(tg ? tg.w : (p.w || ""))}" aria-label="${esc(it.n)} set ${i + 1} weight">
-      <input inputmode="numeric" pattern="[0-9]*" enterkeyhint="next" autocomplete="off" data-f="set" ${sc} data-i="${i}" data-k="r" value="${esc(s.r)}" placeholder="${esc(p.r || it.reps || "")}" aria-label="${esc(it.n)} set ${i + 1} reps">`;
+      <input inputmode="decimal" enterkeyhint="next" autocomplete="off" data-f="set" ${sc} data-i="${i}" data-k="w" value="${esc(s.w)}" placeholder="${esc(tg ? tg.w : dp ? (dp.w || "") : (p.w || ""))}" aria-label="${esc(it.n)} set ${i + 1} weight">
+      <input inputmode="numeric" pattern="[0-9]*" enterkeyhint="next" autocomplete="off" data-f="set" ${sc} data-i="${i}" data-k="r" value="${esc(s.r)}" placeholder="${esc(dp ? dp.r : (p.r || it.reps || ""))}" aria-label="${esc(it.n)} set ${i + 1} reps">`;
     }).join("")}
     </div><button type="button" class="link addset" data-act="addset" ${sc}>${IC.plus}Add Set</button></div>`;
 }
@@ -539,8 +543,10 @@ async function act(a, el) {
     case "addset": { const s = formOf(d.scope).ex[d.id].sets, l = s[s.length - 1] || { w: "", r: "" }; s.push({ w: l.w, r: "" }); touch(d.scope); render(); break; }
     case "preset": startTimer("Rest", [["Rest", +d.s]]); break;
     case "btimer": {
-      const t = dayOf(program, draft.day).blocks[+d.b].timer;
-      let ph = []; for (let i = 0; i < (t.rep || 1); i++) ph = ph.concat(t.ph);
+      const blk = dayOf(program, draft.day).blocks[+d.b], t = blk.timer;
+      const lad = t.holdFrom && blk.items.find(x => x.id === t.holdFrom), lt = lad ? ladderTarget(workouts, lad) : null;
+      const base = lt ? t.ph.map(([l, s]) => [l, /side/i.test(l) ? lt.val : s]) : t.ph;
+      let ph = []; for (let i = 0; i < (t.rep || 1); i++) ph = ph.concat(base);
       startTimer(t.label, ph, t.ph.length); break;
     }
     case "stoptimer": stopTimer(); break;
@@ -718,7 +724,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 // Apply changes made to data/program.json since `base` to an in-app edited program, field by field,
 // leaving alone anything Noah changed himself. Returns true if anything changed.
 function mergeDefaults(prog, base, next) {
-  const FIELDS = ["n", "sets", "reps", "rounds", "note", "rest", "wt", "how"], key = (d, it) => d.n + ":" + it.id;
+  const FIELDS = ["n", "sets", "reps", "rounds", "note", "rest", "wt", "how", "ladder", "dp"], key = (d, it) => d.n + ":" + it.id;
   const idx = p => { const m = {}; for (const d of p.days) for (const it of itemsOf(d)) m[key(d, it)] = it; return m; };
   const b = idx(base), n = idx(next);
   let changed = false;

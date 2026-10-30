@@ -98,6 +98,45 @@ export function target(workouts, program, item) {
   return { w: last.top, up: false, last: last.top, inc, deload };
 }
 
+// Ladder progression for a rounds item, e.g. Copenhagen holds 20 → 25 → 30 sec.
+// item.ladder = { start, step, max, unit, then? }. Each finished session with every round done moves
+// one step up; a session with missed rounds repeats the same step. Returns null with no ladder.
+export function ladderTarget(workouts, item, ref) {
+  const L = item.ladder;
+  if (!L || item.t !== "rounds") return null;
+  let steps = 0, last = null;
+  const past = workouts.filter(w => !ref || w.id !== ref.id).slice().reverse();   // oldest first
+  for (const w of past) {
+    const e = w.ex && w.ex[item.id];
+    if (!e || e.rounds == null) continue;
+    const full = e.rounds >= (e.of || item.rounds || 1);
+    if (full) steps++;
+    last = { full };
+  }
+  const val = Math.min(L.max, L.start + L.step * steps);
+  return { val, unit: L.unit || "", up: !!(last && last.full) && val > L.start, maxed: val >= L.max, then: L.then || "", first: !last };
+}
+
+// Double progression for a sets item: add reps up to the top of the range, then add weight and reset.
+// item.dp = { min, max, inc }. Bodyweight sets have weight "" (0).
+export function dpTarget(workouts, item, ref) {
+  const D = item.dp;
+  if (!D || item.t !== "sets") return null;
+  for (const w of workouts) {
+    if (ref && w.id === ref.id) continue;
+    const e = w.ex && w.ex[item.id];
+    const done = e && e.sets ? e.sets.filter(x => num(x.r) != null) : [];
+    if (!done.length) continue;
+    const wt = Math.max(0, ...done.map(x => num(x.w) || 0));
+    const work = done.filter(x => (num(x.w) || 0) >= wt);
+    const low = Math.min(...work.map(x => num(x.r)));
+    if (work.length >= (item.sets || 1) && low >= D.max) return { w: wt + D.inc, r: D.min, up: "weight", last: wt };
+    if (work.length >= (item.sets || 1) && low >= (item.reps || D.min)) return { w: wt, r: Math.min(D.max, low + 1), up: "reps", last: wt };
+    return { w: wt, r: Math.max(D.min, low || D.min), up: "", last: wt };
+  }
+  return null;
+}
+
 // Turn a stored workout into an editable form (rounds as arrays of booleans).
 export function toForm(w) {
   const ex = {};
