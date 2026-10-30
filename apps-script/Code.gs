@@ -277,9 +277,10 @@ function workoutOf_(p) {
       isos.push(v);
       if (!start && /start/i.test(path)) start = v;
       if (!end && /end/i.test(path)) end = v;
-    } else if (typeof v === 'string') {
+    } else if (typeof v === 'string' && num_(v) === null) {
       if (!type && /type|activity|title|display/i.test(key) && !/source|platform|device|unit/i.test(path) && v.indexOf('/') < 0 && v.length < 40) type = v;
-    } else if (typeof v === 'number') {
+    } else if (num_(v) !== null) {   // numbers can arrive as strings ("averageHeartRateBeatsPerMinute": "102")
+      v = num_(v);
       if (cal === null && /calor|energy|kcal/i.test(path)) cal = /joule/i.test(path) ? v / 4184 : v;
       if (/heart/i.test(path) && /max/i.test(path)) { if (maxHr === null) maxHr = v; }
       else if (avgHr === null && /heart/i.test(path) && /avg|average|mean/i.test(path)) avgHr = v;

@@ -154,6 +154,8 @@ export function lastWeeks(n) {
 // time (imported history) fall back to the longest watch workout on the same date.
 // Returns { byId: {sessionId: watchWorkout}, unmatched: [watchWorkout] }.
 const isWalk = x => /walk|hike|sleep/i.test(x.type || "");
+// Only gym-type workouts are offered as "not logged yet"; tennis, surfing etc. aren't part of the program.
+const isGym = x => !x.type || /strength|weight|workout|training|cardio|hiit|core|functional|cross|interval/i.test(x.type);
 export function matchWatch(workouts, watch) {
   const byId = {}, used = new Set();
   const list = watch.filter(x => x && x.start && x.end);
@@ -164,12 +166,13 @@ export function matchWatch(workouts, watch) {
       for (const x of list) {
         if (used.has(x.start)) continue;
         const o = Math.min(b, +new Date(x.end)) - Math.max(a, +new Date(x.start));
-        if (o > score) { score = o; best = x; }
+        const sc = isWalk(x) ? o / 2 : o;   // prefer the gym workout over a walk that overlaps
+        if (sc > score) { score = sc; best = x; }
       }
     }
     if (!best) for (const x of list) if (!used.has(x.start) && x.date === w.date && !isWalk(x) && (!best || x.mins > best.mins)) best = x;
     if (best) { byId[w.id] = best; used.add(best.start); }
   }
-  const unmatched = list.filter(x => !used.has(x.start) && !isWalk(x) && x.mins >= 15).sort((a, b) => a.start < b.start ? 1 : -1);
+  const unmatched = list.filter(x => !used.has(x.start) && !isWalk(x) && isGym(x) && x.mins >= 15).sort((a, b) => a.start < b.start ? 1 : -1);
   return { byId, unmatched };
 }
