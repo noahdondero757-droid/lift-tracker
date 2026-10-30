@@ -114,9 +114,9 @@ addEventListener("scroll", onScroll, { passive: true });
 function targetText(it, tg) {
   if (!tg) return "";
   const W = v => v ? `${lb(v)} lb` : "bodyweight";
-  const main = tg.up ? `${IC.arrowUp}<span>Target ${tg.last ? W(tg.w) : `+${lb(tg.w)} lb added`} · +${tg.inc} after hitting all ${it.sets}×${it.reps}</span>` : `<span>Repeat ${W(tg.w)} · finish all ${it.sets}×${it.reps} to move up</span>`;
+  const main = tg.up ? `${IC.arrowUp}<span>Target ${tg.last ? W(tg.w) : `+${lb(tg.w)} lb added`} · +${tg.inc} after hitting all ${it.sets}×${it.reps}</span>` : "";
   const dl = tg.deload ? `<div class="target warn">${IC.warn}<span>Missed reps at ${lb(tg.w)} twice in a row. Consider a deload to ${lb(tg.deload)} lb.</span></div>` : "";
-  return `<div class="target ${tg.up ? "up" : ""}">${main}</div>${dl}`;
+  return (main ? `<div class="target up">${main}</div>` : "") + dl;
 }
 
 function vToday() {
@@ -188,7 +188,7 @@ function exHTML(it, form, scope, ref) {
   const e = form.ex[it.id] || {}, sc = `data-scope="${scope}" data-id="${esc(it.id)}"`;
   const note = it.note ? `<span class="cell-detail">${esc(it.note)}</span>` : "";
   const wt_ = scope === "draft" ? wTarget(workouts, it, ref) : null;
-  const wtTxt = wt_ ? `<div class="target ${wt_.up ? "up" : ""}">${wt_.up ? IC.arrowUp : ""}<span>${wt_.up ? `Go up: ${lb(wt_.w)} lb (+${it.wprog.inc})` : `Repeat ${lb(wt_.w)} lb · finish every round to go up`}</span></div>` : scope === "draft" && it.wprog ? `<div class="target"><span>Log the weight you use. Finish every round and it adds ${it.wprog.inc} lb next time.</span></div>` : "";
+  const wtTxt = wt_ && wt_.up ? `<div class="target ${wt_.up ? "up" : ""}">${wt_.up ? IC.arrowUp : ""}<span>${wt_.up ? `Go up: ${lb(wt_.w)} lb (+${it.wprog.inc})` : ""}</span></div>` : "";
   const wbox = cls => `<label class="rw ${cls}"><span>Weight</span><input inputmode="decimal" autocomplete="off" data-f="rw" ${sc} value="${esc(e.w || "")}" placeholder="${esc(wt_ ? wt_.w : lastWeight(workouts, it.id, ref))}" aria-label="${esc(it.n)} weight in pounds"><span class="rw-u">lb</span></label>`;
   if (it.t === "check" && it.wt)
     return `<div class="cell checkcell wtcheck ${e.done ? "on" : ""}"><button type="button" class="checkbtn" data-act="check" ${sc} aria-pressed="${!!e.done}"><span class="circle" aria-hidden="true"></span><span class="cell-body"><span class="cell-title">${esc(it.n)}</span>${it.note ? `<span class="cell-sub">${esc(it.note)}</span>` : ""}</span></button>${wbox("compact")}${wtTxt}</div>`;
