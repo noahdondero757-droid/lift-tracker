@@ -97,17 +97,17 @@ function sync() {
   // ---- everything else: saved raw so the app can read it ----
   out.daily = {}; out.raw = {}; out.sleep = [];
   const DAILY = ['daily-resting-heart-rate', 'daily-respiratory-rate', 'daily-oxygen-saturation',
-                 'steps', 'daily-vo2-max', 'vo2-max', 'weight'];
+                 'daily-vo2-max', 'vo2-max', 'weight'];
   DAILY.forEach(type => {
-    const pts = list_(type, out, type === 'steps' ? 40 : 3);   // steps come in many small chunks per day
+    const pts = list_(type, out, 3);
     if (!pts.length) return;
     out.raw[type] = pts.slice(-2);
     const m = {};
     pts.forEach(p => { const d = findDate_(p) || isoDate_(p); const v = mainNum_(p); if (d && d >= cutoff && typeof v === 'number') (m[d] = m[d] || []).push(v); });
     out.daily[type] = {};
-    const sum = type === 'steps';
-    Object.keys(m).forEach(d => out.daily[type][d] = Math.round(m[d].reduce((a, b) => a + b, 0) / (sum ? 1 : m[d].length) * 100) / 100);
+    Object.keys(m).forEach(d => out.daily[type][d] = Math.round(m[d].reduce((a, b) => a + b, 0) / m[d].length * 100) / 100);
   });
+  out.daily.steps = steps_(out);
   const since = new Date(Date.now() - 15 * 864e5).toISOString();
   let sl = list_('sleep', out, 3, 'sleep.interval.end_time >= "' + since + '"');
   if (!sl.length) sl = list_('sleep', out, 3);
@@ -255,10 +255,46 @@ function histDoc_(prop, name) {
 function loadDays_() { try { return JSON.parse(histDoc_().getBody().getText() || '{}'); } catch (e) { return {}; } }
 function saveDays_(days) {   // keep up to 180 days of history across runs
   const all = loadDays_();
-  Object.keys(days).forEach(d => all[d] = Object.assign(all[d] || {}, days[d]));
+  const sp = PropertiesService.getScriptProperties();
+  if (!sp.getProperty('STEPS_V2')) {   // one time: drop step counts saved by the old, wrong step parser
+    Object.keys(all).forEach(d => delete all[d].steps);
+    sp.setProperty('STEPS_V2', '1');
+  }
+  Object.keys(days).forEach(d => {
+    const prev = all[d] || {}, next = Object.assign({}, days[d]);
+    if (prev.steps && next.steps && prev.steps > next.steps && d >= Utilities.formatDate(new Date(Date.now() - 864e5), Session.getScriptTimeZone(), 'yyyy-MM-dd')) next.steps = prev.steps;
+    all[d] = Object.assign(prev, next);
+  });
   const trimmed = {};
   Object.keys(all).sort().slice(-180).forEach(d => trimmed[d] = all[d]);
   histDoc_().getBody().setText(JSON.stringify(trimmed));
+}
+
+// ---------- steps ----------
+// Google sends steps per minute: { steps: { interval: { civilStartTime: { date } }, count: "12" } }.
+// Add them up per local day and per device, then keep the device with the most steps that day, so
+// the Fitbit and the Apple Watch don't get counted twice.
+function steps_(out) {
+  const since = new Date(Date.now() - 8 * 864e5).toISOString();
+  const errs = out.errors.length;
+  let pts = list_('steps', out, 80, 'steps.interval.start_time >= "' + since + '"');
+  if (out.errors.length > errs) { out.errors.length = errs; pts = list_('steps', out, 80); }   // filter not accepted: newest first anyway
+  out.raw.steps = pts.slice(-2);
+  const byDay = {};
+  pts.forEach(p => {
+    const st = p.steps || {}, iv = st.interval || {}, cd = (iv.civilStartTime || {}).date;
+    const n = num_(st.count);
+    if (!cd || n === null) return;
+    const date = cd.year + '-' + pad_(cd.month) + '-' + pad_(cd.day);
+    const ds = p.dataSource || {}, src = ds.platform + '|' + ((ds.device || {}).displayName || (ds.application || {}).packageName || '');
+    const day = byDay[date] = byDay[date] || {};
+    day[src] = (day[src] || 0) + n;
+  });
+  const dates = Object.keys(byDay).sort();
+  if (dates.length > 1 && pts.length >= 7900) dates.shift();   // the oldest day may be cut off by the page limit
+  const res = {};
+  dates.forEach(d => res[d] = Math.max.apply(null, Object.keys(byDay[d]).map(k => byDay[d][k])));
+  return res;
 }
 
 // ---------- workouts tracked on the watch ----------
