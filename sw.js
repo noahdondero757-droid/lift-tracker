@@ -1,10 +1,10 @@
 // Offline cache. Serves from cache first and refreshes in the background, so the app opens
 // instantly at the gym and picks up new versions on the next launch.
-const VERSION = "v13";
+const VERSION = "v14";
 const CACHE = "lift-tracker-" + VERSION;
 const APP = [
   "./", "index.html", "styles.css", "manifest.webmanifest",
-  "js/app.js", "js/db.js", "js/logic.js", "js/timer.js", "js/charts.js", "js/vitals.js",
+  "js/app.js", "js/db.js", "js/logic.js", "js/timer.js", "js/charts.js", "js/vitals.js", "js/health.js",
   "data/program.json", "data/history.json",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",
 ];

@@ -2,8 +2,9 @@ import * as db from "./db.js";
 import { startTimer, stopTimer, initTimer } from "./timer.js";
 import { progressChart, barChart } from "./charts.js";
 import { V, initVitals, setLink, refreshVitals, statusText, watchWorkouts } from "./vitals.js";
+import * as H from "./health.js";
 import {
-  MAIN, pad, today, parseD, num, uid, weekOf, sortWorkouts, nextDay, dayOf, itemsOf, mainItem,
+  MAIN, pad, ymd, today, parseD, num, uid, weekOf, sortWorkouts, nextDay, dayOf, itemsOf, mainItem,
   lastSets, lastWeight, matchWatch, topSet, target, toForm, fillForm, newDraft, fromForm, volume, lastWeeks,
 } from "./logic.js";
 
@@ -94,11 +95,17 @@ function render() {
   onScroll();
   const sh = $("#sheet");
   if (editing) {
+    delete sh.dataset.detail;
     const opening = sh.hidden, st = opening ? 0 : sh.scrollTop;
     sh.innerHTML = vSheet(); sh.hidden = false; sh.scrollTop = st;
     if (opening) { sh.classList.remove("enter"); void sh.offsetWidth; sh.classList.add("enter"); }
     document.body.classList.add("locked");
-  } else { sh.hidden = true; sh.innerHTML = ""; document.body.classList.remove("locked"); }
+  } else if (detail) {
+    const opening = sh.hidden || !sh.dataset.detail, st = opening ? 0 : sh.scrollTop;
+    sh.innerHTML = detailHTML(); sh.hidden = false; sh.scrollTop = st; sh.dataset.detail = "1";
+    if (opening) { sh.classList.remove("enter"); void sh.offsetWidth; sh.classList.add("enter"); }
+    document.body.classList.add("locked");
+  } else { sh.hidden = true; sh.innerHTML = ""; delete sh.dataset.detail; document.body.classList.remove("locked"); }
 }
 // Compact title bar fades in once the large title scrolls away.
 function onScroll() { document.body.classList.toggle("scrolled", window.scrollY > 40); }
@@ -121,14 +128,17 @@ function vToday() {
     const val = tg ? `<span class="tnum ${tg.up ? "good" : ""}">${tg.up ? "Target" : "Repeat"} ${lb(tg.w)} lb${tg.up ? ` <span class="badge-inc">+${tg.inc}</span>` : ""}</span>` : ts ? `<span class="tnum">Last ${lb(ts.w)}×${ts.r}</span>` : `<span class="hl-none">First time logging it</span>`;
     mainLine = `<div class="hero-lift"><span>${esc(main.n)}</span>${val}</div>`;
   }
+  const rd = todayReadiness();
   const dots = [0, 1, 2, 3].map(i => `<span class="wkdot ${i < done ? "on" : ""}"></span>`).join("");
   const last = workouts[0];
   return `<section class="view">
     ${largeTitle("Today", esc(new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })))}
+    ${recoveryToday()}
     <div class="hero">
       <div class="hero-top"><span class="kicker">${draft ? "In Progress" : "Up Next"}</span><span class="wk" aria-label="${done} of 4 sessions this week">${dots}<span class="tnum">${done} of 4 this week</span></span></div>
       <div><div class="hero-day">Day ${d.n}</div><div class="hero-name">${esc(d.name)}</div></div>
       ${mainLine}
+      ${rd ? `<div class="hero-ready"><span class="pill ${rd.cls}">${rd.label}</span><span>${esc(rd.tip)}</span></div>` : ""}
       <button class="btn filled large" data-act="${draft ? "tab" : "start"}" data-tab="train" data-day="${d.n}" type="button">${draft ? "Resume Workout" : "Start Workout"}</button>
     </div>
     ${draft ? "" : group("", cell({ attrs: `data-act="tab" data-tab="train"`, title: "Choose a Different Day" }))}
@@ -257,6 +267,7 @@ function vHistory() {
 
   return `<section class="view">
     ${largeTitle("History", `${workouts.length} session${workouts.length === 1 ? "" : "s"} logged`)}
+    ${bodyTrends()}
     <section class="group"><div class="gh"><span>Best Sets</span></div>
       <div class="prs">${prs.map(p => `<div class="pr"><span class="pr-l">${p.n}</span><span class="pr-v tnum">${p.best ? `${lb(p.best.w)}<small>×${p.best.r}</small>` : "—"}</span><span class="pr-s tnum">${p.best ? `e1RM ${Math.round(p.best.v)}${p.best.w ? "" : " (BW)"} · ${esc(fmtDate(p.date))}` : "No sets yet"}</span></div>`).join("")}</div>
       <p class="gf">Estimated 1-rep max uses weight × (1 + reps ÷ 30).</p></section>
@@ -331,6 +342,185 @@ function vSettings() {
   </section>`;
 }
 
+/* ---------- recovery (spec vitals.md V2–V6) ---------- */
+const HL = () => H.lists(V.data && V.data.days);
+const hm = m => { m = Math.round(m || 0); return `${Math.floor(m / 60)}h ${pad(m % 60)}m`; };
+const fmtN = (v, dp) => v == null ? "—" : dp ? (+v).toFixed(dp) : Math.round(v).toLocaleString();
+const vOn = (L, d, k) => { const x = L.vitals.find(z => z.date === d); return x && x[k] != null ? x[k] : null; };
+const sleepOn = (L, d) => L.sleeps.find(z => z.date === d) || null;
+function stageBar(s) {
+  const tot = H.asleep(s) + (s.awake || 0) || 1, w = k => ((s[k] || 0) / tot * 100).toFixed(1) + "%";
+  return `<div class="stagebar" role="img" aria-label="Sleep stages"><span style="width:${w("deep")};background:var(--st-deep)"></span><span style="width:${w("rem")};background:var(--st-rem)"></span><span style="width:${w("light")};background:var(--st-light)"></span><span style="width:${w("awake")};background:var(--st-awake)"></span></div>`;
+}
+const stageLegend = `<div class="legend"><span><i style="background:var(--st-deep)"></i>Deep</span><span><i style="background:var(--st-rem)"></i>REM</span><span><i style="background:var(--st-light)"></i>Light</span><span><i style="background:var(--st-awake)"></i>Awake</span></div>`;
+
+// Each metric: what to plot per day, which direction is good (1 up, -1 down, 0 neither), and what it means.
+const MET = {
+  sleep: { label: "Sleep Score", unit: "", color: "var(--m-sleep)", better: 1, src: "Fitbit via Google Health",
+    get: (d, L) => { const s = sleepOn(L, d); return s ? H.sleepScore(s, L.sleeps) : null; },
+    extra: (d, L) => { const s = sleepOn(L, d); if (!s) return ""; const p = H.scoreParts(s, L.sleeps), bt = s.onset ? fmtTime(s.onset) : null;
+      return `Duration ${p.dur}/50 · Bedtime ${p.bedKnown ? p.bed + "/30" : "—"} · Interruptions ${p.intr}/20 · ${hm(H.asleep(s))} asleep${bt ? `, bed ${bt}` : ""}`; },
+    bar: (d, L) => { const s = sleepOn(L, d); return s ? stageBar(s) : ""; },
+    about: "Same method as Apple's Sleep Score. Duration (50): full marks at 7 h 50 m or more, minus 5 each if deep or REM is low. Bedtime (30): compared with your usual bedtime over the last 13 nights; up to 15 min late is free. Interruptions (20): the first 11 min awake and first two wake-ups are free. 96+ Very high · 81–95 High · 61–80 OK." },
+  hrv: { label: "Heart Rate Variability", short: "HRV", unit: "ms", color: "var(--m-hrv)", better: 1, src: "Fitbit via Google Health", get: (d, L) => vOn(L, d, "hrv"),
+    about: "Higher is better. Compare against your own range, not other people's. A drop of 10%+ below your week is a cue to go lighter." },
+  rhr: { label: "Resting Heart Rate", short: "Resting HR", unit: "bpm", color: "var(--m-rhr)", better: -1, src: "Fitbit via Google Health", get: (d, L) => vOn(L, d, "rhr"),
+    about: "Lower is better. A jump of 3+ bpm over your week usually means fatigue, stress, alcohol or getting sick." },
+  rr: { label: "Breathing Rate", unit: "/min", color: "var(--m-rr)", better: -1, dp: 1, src: "Fitbit via Google Health", get: (d, L) => vOn(L, d, "rr"),
+    extra: (d, L) => { const o = vOn(L, d, "spo2"); return o != null ? `Blood oxygen ${o}%` : ""; },
+    about: "Overnight breathing rate is very stable. A rise of 1+/min, especially with a higher resting HR, is an early sign of illness. Blood oxygen under 94% is worth watching too." },
+  steps: { label: "Steps", unit: "", color: "var(--m-steps)", better: 1, kind: "bar", src: "Google Health", get: (d, L) => vOn(L, d, "steps"),
+    about: "Daily total. Useful for spotting low-activity days between sessions." },
+  vo2: { label: "VO₂ Max", unit: "", color: "var(--m-vo2)", better: 1, dp: 1, src: "Fitbit via Google Health", get: (d, L) => vOn(L, d, "vo2"),
+    about: "Cardio fitness estimate. It moves slowly, so look at months, not days." },
+  weight: { label: "Weight", unit: "lb", color: "var(--m-weight)", better: 0, dp: 1, src: "Fitbit via Google Health", get: (d, L) => vOn(L, d, "weight"),
+    about: "Day-to-day swings of 2–3 lb are water. Watch the average." },
+  sessions: { label: "Sessions", unit: "", color: "var(--c1)", better: 1, kind: "bar", src: "Lift Tracker", get: d => { const n = workouts.filter(w => w.date === d).length; return n || null; },
+    about: "Workouts logged in Lift Tracker. The target is 4 a week." },
+};
+
+function spark(vals, color) {
+  const xs = vals.map((v, i) => [i, v]).filter(p => p[1] != null); if (xs.length < 2) return `<div class="spark"></div>`;
+  const W = 120, Hh = 30, n = vals.length - 1 || 1, ys = xs.map(p => p[1]), mn = Math.min(...ys), mx = Math.max(...ys), r = mx - mn || 1;
+  const pt = ([i, v]) => [(i / n * (W - 4) + 2).toFixed(1), (Hh - 3 - (v - mn) / r * (Hh - 6)).toFixed(1)];
+  const d = xs.map((p, j) => (j ? "L" : "M") + pt(p).join(" ")).join(""), l = pt(xs[xs.length - 1]);
+  return `<svg class="spark" viewBox="0 0 ${W} ${Hh}" aria-hidden="true"><path d="${d}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${l[0]}" cy="${l[1]}" r="2.8" fill="${color}"/></svg>`;
+}
+const last14 = () => [...Array(14)].map((_, i) => ymd(new Date(Date.now() - (13 - i) * 864e5)));
+function tile(key, label, val, unit, sub, subCls, sp) {
+  return `<button type="button" class="tile" data-act="detail" data-k="${key}" aria-label="${esc(label)} details"><span class="tile-l">${label}</span><span class="tile-v"><span class="tnum">${val}</span>${unit ? `<small>${unit}</small>` : ""}</span><span class="tile-s ${subCls || ""}">${sub}</span>${sp}${IC.chev}</button>`;
+}
+// Delta vs 7-day average, colored by whether that direction is good.
+function dTile(key, unit, dp) {
+  const L = HL(), m = MET[key], x = H.delta(L.vitals, key), latest = L.vitals.find(v => v[key] != null);
+  if (!latest) return tile(key, m.short || m.label, "—", "", "No data yet", "", "");
+  const sub = x ? `${x.d >= 0 ? "+" : "−"}${fmtN(Math.abs(x.d), dp)} vs 7-day avg` : esc(fmtDate(latest.date));
+  const cls = !x || Math.abs(x.d) < (key === "steps" ? 500 : 1) ? "" : Math.sign(x.d) === m.better ? "good" : "bad";
+  return tile(key, m.short || m.label, fmtN(latest[key], dp), unit, sub, cls, spark(last14().map(d => vOn(L, d, key)), m.color));
+}
+
+// Today: tiles, early warning, last night. Returns "" when there's no recovery data.
+function recoveryToday() {
+  if (!V.data) return V.link ? "" : group("", cell({ attrs: `data-act="tab" data-tab="settings"`, title: "Connect Google Health", sub: "See sleep, HRV and a readiness call here" }));
+  const L = HL(), s = L.sleeps[0], sc = H.sleepScore(s, L.sleeps);
+  const sTile = sc == null ? tile("sleep", "Sleep Score", "—", "", "No night synced yet", "", "")
+    : tile("sleep", "Sleep Score", sc, "", `${H.scoreWord(sc)} · ${hm(H.asleep(s))}`, H.scoreCls(sc), spark(last14().map(d => MET.sleep.get(d, L)), "var(--m-sleep)"));
+  const b = H.delta(L.vitals, "rr"), o = L.vitals.find(v => v.spo2 != null);
+  const bUp = b && H.recent(b.date) && b.d >= 1, oLow = o && H.recent(o.date) && o.spo2 < 94;
+  const warn = b || o ? group("", `<button type="button" class="cell" data-act="detail" data-k="rr"><span class="cell-body"><span class="cell-title">Early Warning</span><span class="cell-sub tnum">${[b ? `Breathing ${fmtN(b.v, 1)}/min` : "", o ? `O₂ ${o.spo2}%` : ""].filter(Boolean).join(" · ")}</span></span><span class="pill ${bUp || oLow ? "warn" : "good"}">${bUp || oLow ? "Elevated" : "Normal"}</span>${IC.chev}</button>`) : "";
+  const fresh = s && H.recent(s.date), r = fresh ? H.readiness(s, L.vitals) : null;
+  const night = !fresh ? group("Last Night", `<div class="empty">Last night hasn't synced yet. Open the Fitbit app to sync your watch; it shows up within the hour.</div>`, { cls: "padded" })
+    : group("Last Night", `<button type="button" class="nightbtn" data-act="detail" data-k="sleep">
+        <span class="row between"><span class="cell-sub">${esc(fmtDate(s.date))}${s.onset ? ` · bed ${fmtTime(s.onset)}` : ""}</span><span class="pill ${r.cls}">${r.label}</span></span>
+        <span class="stats">${[["Asleep", hm(H.asleep(s))], ["Deep", hm(s.deep)], ["REM", hm(s.rem)], ["Awake", `${Math.round(s.awake || 0)}m`]].map(([l, v]) => `<span class="stat"><span class="stat-v tnum">${v}</span><span class="stat-l">${l}</span></span>`).join("")}</span>
+        ${stageBar(s)}
+        <span class="advice">${esc(r.tip)}</span>${r.notes.length ? `<ul class="notes">${r.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}</button>`, { cls: "padded" });
+  return `<div class="tiles">${sTile}${dTile("hrv", "ms")}${dTile("rhr", "bpm")}${dTile("steps", "", 0)}</div>${warn}${night}`;
+}
+function todayReadiness() {
+  if (!V.data) return null;
+  const L = HL(), s = L.sleeps[0];
+  return s && H.recent(s.date) ? H.readiness(s, L.vitals) : null;
+}
+
+// History: Body & activity (V6).
+function bodyTrends() {
+  const L = HL(), ser = k => L.vitals.filter(v => v[k] != null).slice(0, 12).reverse();
+  const chg = (a, k, u) => a.length > 1 ? `${a[a.length - 1][k] - a[0][k] >= 0 ? "+" : "−"}${Math.abs(a[a.length - 1][k] - a[0][k]).toFixed(1)}${u} since ${esc(fmtDate(a[0].date))}` : a.length ? esc(fmtDate(a[0].date)) : "";
+  const vo = ser("vo2"), wt = ser("weight");
+  const st = last14().map(d => vOn(L, d, "steps")), st7 = st.slice(7).filter(x => x != null), avg7 = st7.length ? Math.round(st7.reduce((a, b) => a + b, 0) / st7.length) : null;
+  const w30 = workouts.filter(w => parseD(w.date) >= new Date(Date.now() - 30 * 864e5)).length;
+  return `<section class="group"><div class="gh"><span>Body &amp; Activity</span></div><div class="tiles">
+    ${vo.length ? tile("vo2", "VO₂ Max", fmtN(vo[vo.length - 1].vo2, 1), "", chg(vo, "vo2", ""), "", spark(vo.map(x => x.vo2), "var(--m-vo2)")) : tile("vo2", "VO₂ Max", "—", "", "No data yet", "", "")}
+    ${wt.length ? tile("weight", "Weight", fmtN(wt[wt.length - 1].weight, 1), "lb", chg(wt, "weight", " lb"), "", spark(wt.map(x => x.weight), "var(--m-weight)")) : tile("weight", "Weight", "—", "", "Log weight in the Fitbit app", "", "")}
+    ${avg7 != null ? tile("steps", "Steps", avg7.toLocaleString(), "/day", "7-day average", "", spark(st, "var(--m-steps)")) : tile("steps", "Steps", "—", "", "No data yet", "", "")}
+    ${tile("sessions", "Sessions", w30, "", `last 30 days · ${Math.round(w30 / 30 * 7 * 10) / 10}/week`, "", spark(last14().map(d => workouts.filter(w => w.date === d).length), "var(--c1)"))}
+  </div></section>`;
+}
+
+// Full-screen trend sheet (V5), ported from detailHTML().
+let detail = null, geo = null;
+function detailHTML() {
+  const m = MET[detail.k], L = HL();
+  const N = detail.range, dates = [...Array(N)].map((_, i) => ymd(new Date(Date.now() - (N - 1 - i) * 864e5)));
+  const vals = dates.map(d => m.get(d, L)), have = vals.map((v, i) => [i, v]).filter(p => p[1] != null), nums = have.map(p => p[1]);
+  const mean = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
+  const sd = nums.length > 2 ? Math.sqrt(nums.reduce((a, b) => a + (b - mean) ** 2, 0) / (nums.length - 1)) : 0;
+  const lastIdx = have.length ? have[have.length - 1][0] : null;
+  const sel = detail.sel && dates.includes(detail.sel) ? dates.indexOf(detail.sel) : lastIdx;
+  let trend = "";
+  if (have.length >= 4) {
+    const h = Math.floor(have.length / 2), a1 = have.slice(0, h).map(p => p[1]), a2 = have.slice(h).map(p => p[1]);
+    const d = a2.reduce((a, b) => a + b, 0) / a2.length - a1.reduce((a, b) => a + b, 0) / a1.length, th = Math.max(sd * 0.35, (mean || 1) * 0.015);
+    const dir = Math.abs(d) < th ? 0 : Math.sign(d), good = m.better === 0 || dir === 0 ? "" : dir === m.better ? "good" : "bad";
+    trend = `<span class="pill ${good || "neutral"}">${dir === 0 ? "Steady" : dir > 0 ? "Trending up" : "Trending down"}</span>`;
+  }
+  const W = 340, Hh = 190, Lm = 36, R = 8, T = 12, B = 24, iw = W - Lm - R, ih = Hh - T - B;
+  let g = "", mark = "";
+  if (nums.length) {
+    let lo = Math.min(...nums, mean - sd), hi = Math.max(...nums, mean + sd);
+    const padv = (hi - lo) * 0.12 || Math.max(1, hi * 0.05); lo = m.kind === "bar" ? 0 : lo - padv; hi = hi + padv;
+    const X = i => Lm + (N === 1 ? iw / 2 : i / (N - 1) * iw), Y = v => T + ih * (1 - (v - lo) / (hi - lo));
+    const step = H.niceStep((hi - lo) / 4);
+    for (let t = Math.ceil(lo / step) * step; t <= hi; t += step) g += `<line x1="${Lm}" x2="${W - R}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" stroke="var(--sep)"/><text x="${Lm - 6}" y="${(Y(t) + 3).toFixed(1)}" text-anchor="end">${fmtN(t, step < 1 ? 1 : 0)}</text>`;
+    if (m.kind !== "bar" && sd > 0) g += `<rect x="${Lm}" y="${Y(mean + sd).toFixed(1)}" width="${iw}" height="${(Y(mean - sd) - Y(mean + sd)).toFixed(1)}" fill="${m.color}" opacity=".12"/>`;
+    g += `<line x1="${Lm}" x2="${W - R}" y1="${Y(mean).toFixed(1)}" y2="${Y(mean).toFixed(1)}" stroke="var(--label2)" stroke-dasharray="3 4"/>`;
+    if (m.kind === "bar") { const bw = Math.max(2, iw / N * 0.62); have.forEach(([i, v]) => g += `<rect x="${(X(i) - bw / 2).toFixed(1)}" y="${Y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(Y(lo) - Y(v)).toFixed(1)}" rx="2" fill="${m.color}" opacity="${i === sel ? 1 : .55}"/>`); }
+    else {
+      g += `<path d="${have.map(([i, v], j) => (j ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join("")}" fill="none" stroke="${m.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      if (N <= 31) have.forEach(([i, v]) => g += `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.6" fill="${m.color}"/>`);
+    }
+    const ticks = N <= 7 ? dates.map((_, i) => i) : [0, Math.round((N - 1) / 3), Math.round(2 * (N - 1) / 3), N - 1];
+    for (const i of ticks) { const dd = parseD(dates[i]); g += `<text x="${X(i).toFixed(1)}" y="${Hh - 6}" text-anchor="${i === 0 ? "start" : i === N - 1 ? "end" : "middle"}">${N <= 7 ? dd.toLocaleDateString(undefined, { weekday: "narrow" }) : (dd.getMonth() + 1) + "/" + dd.getDate()}</text>`; }
+    if (sel != null && vals[sel] != null) mark = `<line id="dmL" x1="${X(sel)}" x2="${X(sel)}" y1="${T}" y2="${T + ih}" stroke="var(--label)" stroke-width="1" opacity=".35"/><circle id="dmC" cx="${X(sel)}" cy="${Y(vals[sel])}" r="5.5" fill="${m.color}" stroke="var(--card)" stroke-width="2"/>`;
+    geo = { N, Lm, iw, dates, vals, X, Y, mean };
+  } else geo = null;
+  const sv = sel != null ? vals[sel] : null, sd8 = sel != null ? dates[sel] : null;
+  const dlt = sv != null && mean != null ? sv - mean : null, dCls = dlt == null || m.better === 0 || Math.abs(dlt) < (sd * 0.5 || 0.0001) ? "" : Math.sign(dlt) === m.better ? "good" : "bad";
+  const read = `<div class="dread"><span class="cell-sub" id="drD">${sd8 ? esc(fmtDate(sd8)) : "No data"}</span>
+    <span class="dread-v"><span class="tnum" id="drV">${fmtN(sv, m.dp)}</span><small>${m.unit}</small></span>
+    <span class="tile-s ${dCls}" id="drS">${dlt == null ? "" : `${dlt >= 0 ? "+" : "−"}${fmtN(Math.abs(dlt), m.dp)} vs ${N}-day avg`}</span>
+    <span class="tile-s" id="drX">${m.extra && sd8 ? esc(m.extra(sd8, L)) : ""}</span></div>`;
+  const stats = nums.length ? `<div class="dstats">${[["Average", fmtN(mean, m.dp)], ["Low", fmtN(Math.min(...nums), m.dp)], ["High", fmtN(Math.max(...nums), m.dp)], ["Your range", m.kind === "bar" || !sd ? "—" : fmtN(mean - sd, m.dp) + "–" + fmtN(mean + sd, m.dp)]].map(([l, v]) => `<div><span class="stat-l">${l}</span><span class="stat-v tnum">${v}</span></div>`).join("")}</div>` : "";
+  const rows = have.slice().reverse().map(([i, v]) => {
+    const dd = v - mean, c = m.better === 0 || Math.abs(dd) < (sd * 0.5 || 0.0001) ? "" : Math.sign(dd) === m.better ? "good" : "bad", x = m.extra ? m.extra(dates[i], L) : "";
+    return `<button type="button" class="drow ${i === sel ? "on" : ""}" data-act="pickday" data-d="${dates[i]}"><span>${esc(fmtDate(dates[i]))}</span><span class="tnum dv">${fmtN(v, m.dp)}<small> ${m.unit}</small></span><span class="tnum dz ${c}">${dd >= 0 ? "+" : "−"}${fmtN(Math.abs(dd), m.dp)}</span>${x ? `<span class="dx">${esc(x)}</span>` : ""}${m.bar ? `<span class="dx">${m.bar(dates[i], L)}</span>` : ""}</button>`;
+  }).join("");
+  return `<div class="sheetbar"><button type="button" class="iconbtn" data-act="closedetail" aria-label="Close">✕</button><div class="sheettitle">${m.label}</div><span class="sb-r">${trend}</span></div>
+    <div class="sbody">
+      ${seg([[7, "7D"], [30, "30D"], [90, "90D"]], detail.range, "range")}
+      ${read}
+      ${group("", nums.length ? `<svg class="dchart" id="dchart" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="${esc(m.label)}, last ${N} days">${g}${mark}</svg>${detail.k === "sleep" ? stageLegend : ""}<div class="hint">Drag across the chart to see each day · dashed line is your ${N}-day average${m.kind !== "bar" && sd ? " · shaded band is your usual range" : ""}</div>` : `<div class="empty">No ${esc(m.label.toLowerCase())} data in the last ${N} days.</div>`, { cls: "padded" })}
+      ${stats}
+      ${rows ? group("Timeline", rows) : ""}
+      <p class="gf">${m.about} Source: ${m.src}.</p>
+    </div>`;
+}
+function scrub(ev) {
+  const svg = $("#dchart"); if (!svg || !geo || !detail) return;
+  const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width * 340;
+  let i = Math.round((x - geo.Lm) / geo.iw * (geo.N - 1)); i = Math.max(0, Math.min(geo.N - 1, i));
+  let best = null; for (let k = 0; k < geo.N; k++) if (geo.vals[k] != null && (best == null || Math.abs(k - i) < Math.abs(best - i))) best = k;
+  if (best == null) return;
+  const m = MET[detail.k], v = geo.vals[best], d = geo.dates[best], dl = v - geo.mean;
+  const Ln = $("#dmL"), C = $("#dmC"); if (Ln && C) { Ln.setAttribute("x1", geo.X(best)); Ln.setAttribute("x2", geo.X(best)); C.setAttribute("cx", geo.X(best)); C.setAttribute("cy", geo.Y(v)); }
+  $("#drD").textContent = fmtDate(d); $("#drV").textContent = fmtN(v, m.dp);
+  $("#drS").textContent = `${dl >= 0 ? "+" : "−"}${fmtN(Math.abs(dl), m.dp)} vs ${geo.N}-day avg`; $("#drS").className = "tile-s";
+  $("#drX").textContent = m.extra ? m.extra(d, HL()) : "";
+  detail.sel = d;
+}
+let scrubbing = false, swipeX = null;
+document.addEventListener("pointerdown", e => {
+  if (e.target.closest && e.target.closest("#dchart")) { scrubbing = true; scrub(e); try { e.target.closest("#dchart").setPointerCapture(e.pointerId); } catch {} }
+  else if (detail && !editing && e.clientX < 28 && e.target.closest("#sheet")) swipeX = e.clientX;   // swipe back from the left edge
+});
+document.addEventListener("pointermove", e => { if (scrubbing) scrub(e); });
+document.addEventListener("pointerup", e => {
+  if (scrubbing) { scrubbing = false; if (detail) document.querySelectorAll(".drow").forEach(r => r.classList.toggle("on", r.dataset.d === detail.sel)); }
+  if (swipeX != null) { if (e.clientX - swipeX > 80) { detail = null; render(); } swipeX = null; }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && detail && !editing) { detail = null; render(); } });
+
 /* ---------- actions ---------- */
 const formOf = scope => scope === "edit" ? editing : draft;
 const touch = scope => { if (scope === "draft") persistDraft(); };
@@ -371,6 +561,10 @@ async function act(a, el) {
     }
     case "openw": { const w = workouts.find(x => x.id === d.id); if (w) { editing = toForm(w); render(); $("#sheet").scrollTop = 0; } break; }
     case "closesheet": editing = null; render(); break;
+    case "detail": detail = { k: d.k, range: ["vo2", "weight"].includes(d.k) ? 90 : 30, sel: null }; render(); $("#sheet").scrollTop = 0; break;
+    case "closedetail": detail = null; render(); break;
+    case "range": detail.range = +d.v; detail.sel = null; render(); break;
+    case "pickday": detail.sel = d.d; render(); $("#sheet").scrollTo({ top: 0, behavior: "smooth" }); break;
     case "eday": editing.day = +d.v; render(); break;
     case "logwatch": {
       const x = watchWorkouts().find(y => y.start === d.start); if (!x) break;

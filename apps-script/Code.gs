@@ -99,7 +99,7 @@ function sync() {
   const DAILY = ['daily-resting-heart-rate', 'daily-respiratory-rate', 'daily-oxygen-saturation',
                  'steps', 'daily-vo2-max', 'vo2-max', 'weight'];
   DAILY.forEach(type => {
-    const pts = list_(type, out, 3);
+    const pts = list_(type, out, type === 'steps' ? 40 : 3);   // steps come in many small chunks per day
     if (!pts.length) return;
     out.raw[type] = pts.slice(-2);
     const m = {};
@@ -204,7 +204,8 @@ function normalize_(out) {
   (out.sleep || []).forEach(p => {
     const s = sleepOf_(p); if (!s) return;
     const prev = days[s.date] && days[s.date].sleep;
-    if (!prev || (s.deep + s.rem + s.light) > (prev.deep + prev.rem + prev.light)) get(s.date).sleep = s;   // keep the main sleep, not naps
+    // keep the main sleep, not naps
+    if (!prev || (s.main && !prev.main) || (s.main === prev.main && (s.deep + s.rem + s.light) > (prev.deep + prev.rem + prev.light))) get(s.date).sleep = s;
   });
   return days;
 }
@@ -217,24 +218,32 @@ function isoIn_(o) {   // ISO timestamps directly inside o (one level of nesting
   });
   return r.sort();
 }
+// One night from a Google Health sleep point. Stage minutes come from the night's own summary;
+// onset and wake-ups come from the stage list (startTime/endTime only: each stage also carries
+// createTime/updateTime, which are not part of the night).
 function sleepOf_(p) {
-  const segs = [];
-  walk_(p, (k, v) => {
-    if (!v || typeof v !== 'object' || Array.isArray(v)) return;
-    const label = Object.keys(v).map(x => typeof v[x] === 'string' ? v[x] : '').join(' ');
-    const m = label.match(/DEEP|REM|LIGHT|AWAKE|WAKE|RESTLESS/i);
-    const t = isoIn_(v);
-    if (m && t.length >= 2) segs.push({ k: /DEEP/i.test(m[0]) ? 'deep' : /REM/i.test(m[0]) ? 'rem' : /LIGHT/i.test(m[0]) ? 'light' : 'awake', st: new Date(t[0]).getTime(), en: new Date(t[t.length - 1]).getTime() });
-  });
-  if (!segs.length) return null;
-  const asleep = segs.filter(x => x.k !== 'awake');
-  if (!asleep.length) return null;
-  const on = Math.min.apply(null, asleep.map(x => x.st)), off = Math.max.apply(null, asleep.map(x => x.en));
-  const min = x => Math.round((x.en - x.st) / 6e4), sum = k => segs.filter(x => x.k === k).reduce((a, x) => a + min(x), 0);
-  const mid = segs.filter(x => x.k === 'awake' && x.st >= on && x.en <= off);
-  const date = Utilities.formatDate(new Date(off), Session.getScriptTimeZone(), 'yyyy-MM-dd');
-  return { date: date, deep: sum('deep'), rem: sum('rem'), light: sum('light'), awake: sum('awake'),
-           onset: new Date(on).toISOString(), wakeMin: mid.reduce((a, x) => a + min(x), 0), wakes: mid.length };
+  const sl = p.sleep || {};
+  const iv = sl.interval || {};
+  const stages = (sl.stages || []).filter(x => x.startTime && x.endTime && x.type);
+  if (!iv.endTime && !stages.length) return null;
+  const kind = t => /DEEP/i.test(t) ? 'deep' : /REM/i.test(t) ? 'rem' : /AWAKE|WAKE|RESTLESS/i.test(t) ? 'awake' : 'light';
+  const min = x => Math.round((new Date(x.endTime) - new Date(x.startTime)) / 6e4);
+  const tot = { deep: 0, rem: 0, light: 0, awake: 0 };
+  const summary = ((sl.summary || {}).stagesSummary || []);
+  if (summary.length) summary.forEach(x => tot[kind(x.type)] += Number(x.minutes) || 0);
+  else stages.forEach(x => tot[kind(x.type)] += min(x));
+  if (tot.deep + tot.rem + tot.light === 0) {   // no stages (classic sleep): count it all as light
+    const asleep = Number((sl.summary || {}).minutesAsleep) || (iv.endTime ? Math.round((new Date(iv.endTime) - new Date(iv.startTime)) / 6e4) : 0);
+    tot.light = asleep;
+  }
+  const asleepStages = stages.filter(x => kind(x.type) !== 'awake');
+  const on = asleepStages.length ? asleepStages[0].startTime : iv.startTime;
+  const off = asleepStages.length ? asleepStages[asleepStages.length - 1].endTime : iv.endTime;
+  const mid = stages.filter(x => kind(x.type) === 'awake' && x.startTime >= on && x.endTime <= off);
+  const date = Utilities.formatDate(new Date(off || iv.endTime), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return { date: date, deep: tot.deep, rem: tot.rem, light: tot.light, awake: tot.awake,
+           onset: on ? new Date(on).toISOString() : null, wakeMin: mid.reduce((a, x) => a + min(x), 0), wakes: mid.length,
+           main: (sl.metadata || {}).mainSleep !== false };
 }
 function histDoc_(prop, name) {
   const p = PropertiesService.getScriptProperties(), id = p.getProperty(prop || 'HIST_ID');

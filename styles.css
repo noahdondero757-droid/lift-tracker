@@ -286,3 +286,56 @@ nav.tabs button[aria-current="page"]{color:var(--blue)}
 .watchnote::before{content:"♥ ";color:var(--red)}
 .cell.field>.cell-detail{margin-left:auto}
 .cell.field .seg{flex:1}
+
+/* recovery (vitals) */
+:root{--m-sleep:#5856D6;--m-hrv:#007AFF;--m-rhr:#FF2D55;--m-rr:#30B0C7;--m-steps:#FF9500;--m-vo2:#34C759;--m-weight:#AF52DE;
+  --st-deep:#3634A3;--st-rem:#5AC8FA;--st-light:#007AFF;--st-awake:#FF9F7A}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--m-sleep:#5E5CE6;--m-hrv:#0A84FF;--m-rhr:#FF375F;--m-rr:#40C8E0;--m-steps:#FF9F0A;--m-vo2:#30D158;--m-weight:#BF5AF2;
+  --st-deep:#5E5CE6;--st-rem:#64D2FF;--st-light:#0A84FF;--st-awake:#FF9F7A}}
+:root[data-theme="dark"]{--m-sleep:#5E5CE6;--m-hrv:#0A84FF;--m-rhr:#FF375F;--m-rr:#40C8E0;--m-steps:#FF9F0A;--m-vo2:#30D158;--m-weight:#BF5AF2;
+  --st-deep:#5E5CE6;--st-rem:#64D2FF;--st-light:#0A84FF;--st-awake:#FF9F7A}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{position:relative;display:flex;flex-direction:column;gap:2px;min-width:0;text-align:left;background:var(--card);border-radius:14px;padding:12px 14px 10px}
+.tile:active{background:var(--fill2)}
+.tile .chev{position:absolute;top:14px;right:12px}
+.tile-l{font-size:13px;font-weight:600;color:var(--label2);padding-right:14px}
+.tile-v{display:flex;align-items:baseline;gap:4px;margin-top:2px}
+.tile-v .tnum{font-size:30px;font-weight:700;letter-spacing:.3px;line-height:1.1}
+.tile-v small{font-size:13px;color:var(--label2);font-weight:500}
+.tile-s{font-size:12.5px;color:var(--label2);letter-spacing:-.08px;min-height:1.3em}
+.tile-s.good,.dz.good{color:var(--green)}.tile-s.bad,.dz.bad{color:var(--red)}.tile-s.warn{color:var(--orange)}
+.spark{width:100%;height:30px;display:block;margin-top:4px}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:600;flex:none;white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.good{color:var(--green);background:color-mix(in srgb,var(--green) 15%,transparent)}
+.pill.warn{color:var(--orange);background:color-mix(in srgb,var(--orange) 16%,transparent)}
+.pill.bad{color:var(--red);background:color-mix(in srgb,var(--red) 14%,transparent)}
+.pill.neutral{color:var(--label2);background:var(--fill)}
+.nightbtn{display:flex;flex-direction:column;gap:12px;width:100%;text-align:left}
+.row.between{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{display:flex;flex-direction:column;gap:1px;min-width:0}
+.stat-v{font-size:17px;font-weight:600}
+.stat-l{font-size:12px;color:var(--label2);text-transform:uppercase;letter-spacing:0}
+.stagebar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--fill);gap:2px}
+.stagebar span{display:block;height:100%}
+.advice{font-size:15px;letter-spacing:-.24px}
+.notes{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--label2)}
+.hero-ready{display:flex;gap:10px;align-items:center;font-size:15px;letter-spacing:-.24px;flex-wrap:wrap}
+/* trend sheet */
+.iconbtn{width:32px;height:32px;border-radius:50%;background:var(--fill);color:var(--label2);font-size:14px;font-weight:600;display:grid;place-items:center}
+.sb-r{justify-self:end}
+.dread{display:flex;flex-direction:column;gap:2px;padding:0 4px}
+.dread-v{display:flex;align-items:baseline;gap:5px}
+.dread-v .tnum{font-size:44px;font-weight:700;letter-spacing:.3px;line-height:1.05}
+.dread-v small{font-size:15px;color:var(--label2)}
+.dchart{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
+.dchart text{fill:var(--label2);font-family:var(--font);font-size:10px;font-variant-numeric:tabular-nums}
+.dstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:var(--card);border-radius:12px;padding:12px 14px}
+.dstats>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.drow{display:grid;grid-template-columns:1fr auto 56px;gap:3px 10px;align-items:baseline;width:100%;text-align:left;padding:11px 16px;background:var(--card)}
+.drow.on{background:color-mix(in srgb,var(--blue) 12%,var(--card))}
+.drow .dv{font-weight:600}.drow .dv small{font-weight:500;color:var(--label2);font-size:12px}
+.drow .dz{font-size:13px;text-align:right;color:var(--label2)}
+.drow .dx{grid-column:1/-1;font-size:13px;color:var(--label2)}
+.drow .dx .stagebar{height:6px;margin-top:3px}

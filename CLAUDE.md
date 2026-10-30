@@ -4,7 +4,7 @@ Phone-first workout tracker for Noah's 4-day athletic program: session logging, 
 automatic lift progression, history and progress charts. It's a PWA hosted on GitHub Pages and
 installed to his iPhone Home Screen.
 
-**Specs:** `specs/lift-tracker.md` (workouts, built) and `specs/vitals.md` (recovery data, next). Build to
+**Specs:** `specs/lift-tracker.md` (workouts, built) and `specs/vitals.md` (recovery data, built). Build to
 them, and check work against each spec's Definition of done.
 
 ## Files
@@ -18,6 +18,7 @@ them, and check work against each spec's Definition of done.
   keeps `PASTE_..._HERE` placeholders for the OAuth client, so never commit the real values, the link,
   or the key.
 - `data/vitals-sample.json`: made-up vitals in the `doGet` shape, for development only.
+- `js/vitals.js` fetches/caches the vitals link; `js/health.js` has the sleep score and readiness math.
 - `reference/current-app.html`: the old all-in-one app this replaces. Use it for logic
   (`target()`, `topSet()`, `nextDay()`, the timer, `newDraft()`). Its visual style is no longer used: the
   app now looks iOS-native (see spec R7.3). It also
