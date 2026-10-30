@@ -3,7 +3,16 @@
   "progression": {
     "squat": 10,
     "trapbar": 10,
-    "bench": 5
+    "bench": 5,
+    "bss": 5,
+    "csrow": 5,
+    "smith": 5,
+    "pushdown": 5,
+    "latraise": 2.5,
+    "pullup": 5,
+    "cablerow": 5,
+    "pullover": 5,
+    "reardelt": 2.5
   },
   "days": [
     {
@@ -128,12 +137,7 @@
               "t": "sets",
               "sets": 4,
               "reps": 8,
-              "note": "4×8–12 each leg",
-              "dp": {
-                "min": 8,
-                "max": 12,
-                "inc": 5
-              }
+              "note": "4×8 each leg"
             },
             {
               "id": "jumprope",
@@ -325,26 +329,16 @@
               "n": "Chest supported row",
               "t": "sets",
               "sets": 3,
-              "reps": 8,
-              "note": "3×8–12",
-              "dp": {
-                "min": 8,
-                "max": 12,
-                "inc": 5
-              }
+              "reps": 10,
+              "note": "3×10"
             },
             {
               "id": "smith",
               "n": "Smith press",
               "t": "sets",
               "sets": 3,
-              "reps": 6,
-              "note": "3×6–10",
-              "dp": {
-                "min": 6,
-                "max": 10,
-                "inc": 5
-              }
+              "reps": 8,
+              "note": "3×8"
             },
             {
               "id": "facepull",
@@ -364,26 +358,16 @@
               "n": "Tricep pushdown",
               "t": "sets",
               "sets": 3,
-              "reps": 10,
-              "note": "3×10–15",
-              "dp": {
-                "min": 10,
-                "max": 15,
-                "inc": 5
-              }
+              "reps": 12,
+              "note": "3×12"
             },
             {
               "id": "latraise",
               "n": "Cable lateral raise",
               "t": "sets",
               "sets": 3,
-              "reps": 12,
-              "note": "3×12–20 · 70–75°",
-              "dp": {
-                "min": 12,
-                "max": 20,
-                "inc": 2.5
-              }
+              "reps": 15,
+              "note": "3×15 · 70–75°"
             },
             {
               "id": "pallof",
@@ -613,13 +597,8 @@
               "t": "sets",
               "sets": 5,
               "reps": 5,
-              "note": "5×5–8 · weight = added load",
-              "dp": {
-                "min": 5,
-                "max": 8,
-                "inc": 5,
-                "bw": true
-              }
+              "note": "5×5 · weight = added load",
+              "bw": true
             },
             {
               "id": "cablerow",
@@ -627,12 +606,7 @@
               "t": "sets",
               "sets": 5,
               "reps": 8,
-              "note": "5×8–12",
-              "dp": {
-                "min": 8,
-                "max": 12,
-                "inc": 5
-              }
+              "note": "5×8"
             }
           ]
         },
@@ -665,26 +639,16 @@
               "n": "Lat pullover",
               "t": "sets",
               "sets": 3,
-              "reps": 10,
-              "note": "3×10–15",
-              "dp": {
-                "min": 10,
-                "max": 15,
-                "inc": 5
-              }
+              "reps": 12,
+              "note": "3×12"
             },
             {
               "id": "reardelt",
               "n": "Rear delt fly",
               "t": "sets",
               "sets": 3,
-              "reps": 12,
-              "note": "3×12–20",
-              "dp": {
-                "min": 12,
-                "max": 20,
-                "inc": 2.5
-              }
+              "reps": 15,
+              "note": "3×15"
             },
             {
               "id": "facepull",

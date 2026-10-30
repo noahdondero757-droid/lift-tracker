@@ -113,7 +113,8 @@ addEventListener("scroll", onScroll, { passive: true });
 
 function targetText(it, tg) {
   if (!tg) return "";
-  const main = tg.up ? `${IC.arrowUp}<span>Target ${lb(tg.w)} lb · +${tg.inc} after hitting all ${it.sets}×${it.reps}</span>` : `<span>Repeat ${lb(tg.w)} lb · finish all ${it.sets}×${it.reps} to move up</span>`;
+  const W = v => v ? `${lb(v)} lb` : "bodyweight";
+  const main = tg.up ? `${IC.arrowUp}<span>Target ${tg.last ? W(tg.w) : `+${lb(tg.w)} lb added`} · +${tg.inc} after hitting all ${it.sets}×${it.reps}</span>` : `<span>Repeat ${W(tg.w)} · finish all ${it.sets}×${it.reps} to move up</span>`;
   const dl = tg.deload ? `<div class="target warn">${IC.warn}<span>Missed reps at ${lb(tg.w)} twice in a row. Consider a deload to ${lb(tg.deload)} lb.</span></div>` : "";
   return `<div class="target ${tg.up ? "up" : ""}">${main}</div>${dl}`;
 }
@@ -726,7 +727,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 // Apply changes made to data/program.json since `base` to an in-app edited program, field by field,
 // leaving alone anything Noah changed himself. Returns true if anything changed.
 function mergeDefaults(prog, base, next) {
-  const FIELDS = ["n", "sets", "reps", "rounds", "note", "rest", "wt", "how", "ladder", "dp", "wprog"], key = (d, it) => d.n + ":" + it.id;
+  const FIELDS = ["n", "sets", "reps", "rounds", "note", "rest", "wt", "how", "ladder", "dp", "wprog", "bw"], key = (d, it) => d.n + ":" + it.id;
   const idx = p => { const m = {}; for (const d of p.days) for (const it of itemsOf(d)) m[key(d, it)] = it; return m; };
   const b = idx(base), n = idx(next);
   let changed = false;

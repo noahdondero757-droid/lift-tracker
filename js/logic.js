@@ -73,7 +73,7 @@ export function topSet(sets) {
 // Did these sets hit all prescribed sets × reps at the top working weight?
 function judge(sets, item) {
   const done = sets.filter(x => num(x.r) != null), top = Math.max(0, ...done.map(x => num(x.w) || 0));
-  if (!top) return null;
+  if (!top && !(item.bw && done.length)) return null;
   const work = done.filter(x => (num(x.w) || 0) >= top);
   return { top, hit: work.length >= item.sets && work.every(x => num(x.r) >= item.reps) };
 }
