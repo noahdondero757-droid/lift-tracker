@@ -8,7 +8,8 @@
 //  2. Run "authorize", open the link it logs, and approve. Tick EVERY box on the Google screen.
 //  3. Run "setup" once.
 //  4. Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone) > Deploy.
-//  5. Run "showAppLink" and paste the link it logs into Lift Tracker > Settings > Vitals link.
+//  5. Run "showAppLink" and follow what it logs: the Web app URL (ends in /exec) + ?key=… goes into
+//     Lift Tracker > Settings > Vitals link.
 
 const CLIENT_ID = 'PASTE_CLIENT_ID_HERE';
 const CLIENT_SECRET = 'PASTE_CLIENT_SECRET_HERE';
@@ -311,10 +312,14 @@ function key_() {
   if (!k) { k = Utilities.getUuid().replace(/-/g, ''); p.setProperty('APP_KEY', k); }
   return k;
 }
+// Run from the editor, getUrl() returns the /dev test link, which only works while signed in.
+// The app needs the deployed /exec link, so print the key and where to find that link.
 function showAppLink() {
-  const url = ScriptApp.getService().getUrl();
-  if (!url) { Logger.log('Deploy it first: Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone).'); return; }
-  Logger.log('Paste this into Lift Tracker > Settings > Vitals link:\n' + url + '?key=' + key_());
+  const url = ScriptApp.getService().getUrl() || '';
+  if (/\/exec$/.test(url)) { Logger.log('Paste this into Lift Tracker > Settings > Vitals link:\n' + url + '?key=' + key_()); return; }
+  Logger.log('Your key: ' + key_() + '\n' +
+    'Open Deploy > Manage deployments, copy the Web app URL (it ends in /exec), and add ?key=' + key_() + ' to the end.\n' +
+    'Paste that into Lift Tracker > Settings > Vitals link. (A link ending in /dev will not work in the app.)');
 }
 function doGet(e) {
   const out = x => ContentService.createTextOutput(JSON.stringify(x)).setMimeType(ContentService.MimeType.JSON);
