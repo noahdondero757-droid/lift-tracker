@@ -5,7 +5,7 @@
 //
 // HOW TO USE:
 //  1. Paste your Client ID and Client secret below.
-//  2. Run "authorize", open the link it logs, and approve.
+//  2. Run "authorize", open the link it logs, and approve. Tick EVERY box on the Google screen.
 //  3. Run "setup" once.
 //  4. Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone) > Deploy.
 //  5. Run "showAppLink" and paste the link it logs into Lift Tracker > Settings > Vitals link.
@@ -96,7 +96,7 @@ function sync() {
   // ---- everything else: saved raw so the app can read it ----
   out.daily = {}; out.raw = {}; out.sleep = [];
   const DAILY = ['daily-resting-heart-rate', 'daily-respiratory-rate', 'daily-oxygen-saturation',
-                 'daily-steps', 'steps', 'daily-vo2-max', 'vo2-max', 'weight', 'body-weight', 'daily-heart-rate'];
+                 'steps', 'daily-vo2-max', 'vo2-max', 'weight'];
   DAILY.forEach(type => {
     const pts = list_(type, out, 3);
     if (!pts.length) return;
@@ -104,7 +104,8 @@ function sync() {
     const m = {};
     pts.forEach(p => { const d = findDate_(p) || isoDate_(p); const v = mainNum_(p); if (d && d >= cutoff && typeof v === 'number') (m[d] = m[d] || []).push(v); });
     out.daily[type] = {};
-    Object.keys(m).forEach(d => out.daily[type][d] = Math.round(m[d].reduce((a, b) => a + b, 0) / m[d].length * 100) / 100);
+    const sum = type === 'steps';
+    Object.keys(m).forEach(d => out.daily[type][d] = Math.round(m[d].reduce((a, b) => a + b, 0) / (sum ? 1 : m[d].length) * 100) / 100);
   });
   const since = new Date(Date.now() - 15 * 864e5).toISOString();
   let sl = list_('sleep', out, 3, 'sleep.interval.end_time >= "' + since + '"');
@@ -120,6 +121,8 @@ function sync() {
   Logger.log('HRV days found: ' + Object.keys(out.hrv).length + ' | sleep sessions: ' + out.sleep.length +
     ' | days for app: ' + Object.keys(out.days).length + ' | workouts: ' + out.workouts.length + ' | other data: ' + Object.keys(out.daily).map(k => k + ' ' + Object.keys(out.daily[k]).length).join(', ') +
     (out.errors.length ? ' | errors: ' + out.errors.length : ''));
+  const blocked = out.errors.filter(e => / 403:/.test(e)).map(e => e.split(' ')[0]);
+  if (blocked.length) Logger.log('Not allowed to read: ' + blocked.join(', ') + '. Run reset, then authorize, and tick every box on the Google screen.');
 }
 
 function list_(type, out, maxPages, filter) {
@@ -171,17 +174,18 @@ function isoDate_(o) {
   const m = JSON.stringify(o).match(/"(20\d\d-\d\d-\d\d)T/);
   return m ? m[1] : null;
 }
+function num_(v) { return typeof v === 'number' ? v : (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : null); }
 function mainNum_(o) {
   let r = null;
-  walk_(o, (k, v) => { if (r === null && typeof v === 'number' && !/year|month|day|nanos|seconds|offset|hours|minutes|count$/i.test(k)) r = v; });
-  if (r === null) walk_(o, (k, v) => { if (r === null && typeof v === 'number' && !/year|month|day|nanos|seconds|offset/i.test(k)) r = v; });
+  walk_(o, (k, v) => { if (r === null && num_(v) !== null && !/year|month|day|nanos|seconds|offset|hours|minutes|count$/i.test(k)) r = num_(v); });
+  if (r === null) walk_(o, (k, v) => { if (r === null && num_(v) !== null && !/year|month|day|nanos|seconds|offset/i.test(k)) r = num_(v); });
   return r;
 }
 
 // ---------- normalized data for the app ----------
 // days[YYYY-MM-DD] = { hrv, rhr, rr, spo2, steps, vo2, weight, sleep: {deep, rem, light, awake, onset, wakeMin, wakes} }
 const PICK = { rhr: ['daily-resting-heart-rate'], rr: ['daily-respiratory-rate'], spo2: ['daily-oxygen-saturation'],
-               steps: ['daily-steps', 'steps'], vo2: ['daily-vo2-max', 'vo2-max'], weight: ['weight', 'body-weight'] };
+               steps: ['steps'], vo2: ['daily-vo2-max', 'vo2-max'], weight: ['weight'] };
 function normalize_(out) {
   const days = {};
   const get = d => (days[d] = days[d] || {});
@@ -192,7 +196,7 @@ function normalize_(out) {
     Object.keys(out.daily[t]).forEach(d => {
       let v = out.daily[t][d];
       if (k === 'spo2' && v <= 1) v = v * 100;
-      if (k === 'weight' && v < 150) v = v * 2.20462;      // kg -> lb
+      if (k === 'weight') v = v > 1000 ? v / 453.592 : v < 150 ? v * 2.20462 : v;   // grams or kg -> lb
       get(d)[k] = k === 'steps' ? Math.round(v) : Math.round(v * 10) / 10;
     });
   });
@@ -250,7 +254,7 @@ function saveDays_(days) {   // keep up to 180 days of history across runs
 // ---------- workouts tracked on the watch ----------
 // workouts[] = { start, end (ISO), date, mins, type, avgHr, maxHr, cal }
 // Field names are matched loosely; out.raw keeps a couple of raw points so the shape can be checked.
-const EXERCISE_TYPES = ['exercise', 'exercise-session', 'activity-session', 'workout'];
+const EXERCISE_TYPES = ['exercise'];
 function walkPath_(o, fn, path) {
   if (o && typeof o === 'object') Object.keys(o).forEach(k => { const p = (path ? path + '.' : '') + k; fn(p, o[k]); walkPath_(o[k], fn, p); });
 }
@@ -276,7 +280,7 @@ function workoutOf_(p) {
     } else if (typeof v === 'string') {
       if (!type && /type|activity|title|display/i.test(key) && !/source|platform|device|unit/i.test(path) && v.indexOf('/') < 0 && v.length < 40) type = v;
     } else if (typeof v === 'number') {
-      if (cal === null && /calor|energy|kcal/i.test(path)) cal = v;
+      if (cal === null && /calor|energy|kcal/i.test(path)) cal = /joule/i.test(path) ? v / 4184 : v;
       if (/heart/i.test(path) && /max/i.test(path)) { if (maxHr === null) maxHr = v; }
       else if (avgHr === null && /heart/i.test(path) && /avg|average|mean/i.test(path)) avgHr = v;
     }
