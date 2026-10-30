@@ -37,8 +37,11 @@ export async function refreshVitals() {
     else if (j && j.days) {
       V.data = j; V.fetchedAt = Date.now(); V.state = "ok";
       await db.kvSet("vitals", { data: j, at: V.fetchedAt });
-    } else V.state = "offline";
-  } catch { V.state = "offline"; }
+    } else V.state = "blocked";
+  } catch {
+    // Online but the request failed: usually Google sent a sign-in page (deployment not shared with "Anyone").
+    V.state = navigator.onLine === false ? "offline" : "blocked";
+  }
   onChange();
 }
 
@@ -52,6 +55,7 @@ export function statusText() {
     cached: V.fetchedAt ? `Showing data from ${ago(V.fetchedAt)}` : "Not set up",
     bad: "Link is wrong (bad key)",
     offline: V.fetchedAt ? `Couldn't reach Google. Showing data from ${ago(V.fetchedAt)}` : "Couldn't reach Google",
+    blocked: "Blocked by Google",
   }[V.state];
 }
 

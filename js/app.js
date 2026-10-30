@@ -298,7 +298,8 @@ function vSettings() {
     ${largeTitle("Settings")}
     ${group("Google Health", `<label class="cell field"><span class="cell-title">Vitals link</span><input type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" data-f="vlink" value="${esc(V.link)}" placeholder="Paste link"></label>
       <button type="button" class="cell" data-act="testlink" ${V.link ? "" : "disabled"}><span class="cell-body"><span class="cell-title link-c">Test Link</span></span><span class="cell-detail" id="vstat">${esc(statusText())}</span></button>`,
-      { foot: "The link from your Google script (run showAppLink). It brings in workouts from your watch, and later sleep and recovery data. It stays on this phone." })}
+      { foot: (V.state === "blocked" ? `<strong>Google won't let the app read this link.</strong> In Apps Script: Deploy → Manage deployments → ✏️ → set "Who has access" to <strong>Anyone</strong> → New version → Deploy. The link must end in /exec?key=… (not /dev). ` : "")
+          + "The link from your Google script. It brings in workouts from your watch, and later sleep and recovery data. It stays on this phone." })}
 
     ${group("Backup", `
       <button type="button" class="cell" data-act="export"><span class="sicon blue">${IC.share}</span><span class="cell-body"><span class="cell-title">Export Backup</span></span>${IC.chev}</button>
