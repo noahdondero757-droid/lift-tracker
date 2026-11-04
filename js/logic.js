@@ -141,7 +141,7 @@ export function dpTarget(workouts, item, ref) {
 // item.wprog = { inc }. Every round done at a weight → next time add inc. Otherwise repeat.
 export function wTarget(workouts, item, ref) {
   const P = item.wprog;
-  if (!P) return null;
+  if (!P || !(P.inc > 0)) return null;
   for (const w of workouts) {
     if (ref && w.id === ref.id) continue;
     const e = w.ex && w.ex[item.id], wt = e ? num(e.w) : null;

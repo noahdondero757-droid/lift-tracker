@@ -326,7 +326,7 @@ function vSettings() {
 
     ${group("Program", `${seg(program.days.map(x => [x.n, "Day " + x.n]), d.n, "progday")}
       <label class="field-row"><span>Day name</span><input data-f="prog" data-k="dayname" value="${esc(d.name)}"></label>`,
-      { cls: "padded", right: programEdited ? `<button class="link" type="button" data-act="resetprog">Reset to Default</button>` : "", foot: `Changes save automatically. "+lb" is the weight added after you hit every set and rep (blank = no auto progression). "Rest" starts a timer in seconds each time you log a set's reps. "Weight" adds a pounds box to a rounds or checkbox exercise, like a carry or a rehab raise.` })}
+      { cls: "padded", right: programEdited ? `<button class="link" type="button" data-act="resetprog">Reset to Default</button>` : "", foot: `Changes save automatically. "+lb" is the weight added after you hit every set and rep, or finish every round on a weighted carry or sled (blank = no auto progression). "Rest" starts a timer in seconds each time you log a set's reps. "Weight" adds a pounds box to a rounds or checkbox exercise, like a carry or a rehab raise.` })}
 
     ${d.blocks.map((b, bi) => group("", `
       <div class="eblock"><input class="eb-name" data-f="prog" data-b="${bi}" data-k="label" value="${esc(b.label)}" aria-label="Block name">
@@ -339,7 +339,8 @@ function vSettings() {
         <div class="ei-fields"><span class="tag">${TYPE[it.t]}</span>
           ${it.t === "sets" ? num1(bi, ii, "sets", "Sets", it.sets) + num1(bi, ii, "reps", "Reps", it.reps) + num1(bi, ii, "inc", "+lb", (program.progression || {})[it.id], "decimal") + num1(bi, ii, "rest", "Rest", it.rest || "") : ""}
           ${it.t === "rounds" ? num1(bi, ii, "rounds", "Rounds", it.rounds) : ""}
-          ${it.t !== "sets" ? `<label class="mini sw"><span>Weight</span><input type="checkbox" role="switch" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="wt" ${it.wt ? "checked" : ""} aria-label="Log a weight for this exercise"></label>` : ""}</div>
+          ${it.t !== "sets" ? `<label class="mini sw"><span>Weight</span><input type="checkbox" role="switch" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="wt" ${it.wt ? "checked" : ""} aria-label="Log a weight for this exercise"></label>` : ""}
+          ${it.t !== "sets" && it.wt ? num1(bi, ii, "winc", "+lb", it.wprog && it.wprog.inc, "decimal") : ""}</div>
         <input class="ei-note" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="note" value="${esc(it.note || "")}" placeholder="Note, e.g. 4×5 · 2 min rest" aria-label="Note">
         ${it.t === "check" ? "" : `<textarea class="ei-how" rows="2" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="how" placeholder="How to do it (optional)" aria-label="How to do it">${esc(it.how || "")}</textarea>`}
       </div>`).join("")}
@@ -696,6 +697,7 @@ document.addEventListener("input", e => {
       if (k === "n" || k === "note" || k === "how") it[k] = el.value;
       else if (k === "inc") { program.progression = program.progression || {}; const v = num(el.value); if (v > 0) program.progression[it.id] = v; else delete program.progression[it.id]; }
       else if (k === "rest") { const v = parseInt(el.value, 10); it.rest = v > 0 ? v : 0; }
+      else if (k === "winc") { const v = num(el.value); if (v > 0) it.wprog = { inc: v }; else it.wprog = null; }
       else { const v = parseInt(el.value, 10); if (v > 0) it[k] = v; }
     }
     saveProgram();
