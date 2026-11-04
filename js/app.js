@@ -734,7 +734,8 @@ function mergeDefaults(prog, base, next) {
   for (const d of prog.days) for (const it of itemsOf(d)) {
     const was = b[key(d, it)], now = n[key(d, it)];
     if (!was || !now) continue;
-    for (const f of FIELDS) if (it[f] === was[f] && now[f] !== was[f]) { it[f] = now[f]; changed = true; }
+    const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+    for (const f of FIELDS) if (same(it[f], was[f]) && !same(now[f], was[f])) { it[f] = now[f] === undefined ? undefined : JSON.parse(JSON.stringify(now[f])); changed = true; }
   }
   // Block notes ("about"), matched by day, position and name.
   for (const d of prog.days) d.blocks.forEach((bl, i) => {

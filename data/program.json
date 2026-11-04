@@ -507,7 +507,7 @@
               "wt": true,
               "how": "One round = push the sled 20 yd, then drag it 20 yd back to the start. Push: hands on the handles, arms straight, body leaning in, drive with short powerful steps. Drag: hold the straps or handles, face the sled and walk backward, staying low in your legs. No sled? Do 10 walking lunges each leg per round. Log the weight you put on the sled.",
               "wprog": {
-                "inc": 20
+                "inc": 5
               }
             }
           ],
