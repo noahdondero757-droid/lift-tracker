@@ -779,8 +779,11 @@ async function fetchJSON(url) { const r = await fetch(url, { cache: "no-cache" }
     if (stored) {
       const defs = {};
       for (const d of defaultProgram.days) for (const it of itemsOf(d)) defs[it.id] = it;
-      for (const d of program.days) for (const it of itemsOf(d)) if (it.rest === undefined && defs[it.id] && defs[it.id].rest) it.rest = defs[it.id].rest;
-      let fixed = base && fetched && mergeDefaults(program, base, defaultProgram);
+      // Settings an older app version may have skipped: fill them in only where the phone's copy has none.
+      const ADD = ["rest", "wprog", "ladder", "dp", "bw", "how", "wt"];
+      for (const d of program.days) for (const it of itemsOf(d)) for (const f of ADD)
+        if (it[f] === undefined && defs[it.id] && defs[it.id][f] !== undefined) { it[f] = JSON.parse(JSON.stringify(defs[it.id][f])); var filled = true; }
+      let fixed = (base && fetched && mergeDefaults(program, base, defaultProgram)) || (typeof filled !== "undefined" && filled);
       // One-time fix: programs edited before update tracking existed missed the Pallof press note change.
       const newPallof = itemsOf(defaultProgram.days.find(x => x.n === 2) || { blocks: [] }).find(i => i.id === "pallof");
       for (const d of program.days) for (const it of itemsOf(d)) if (it.id === "pallof" && it.note === "3×10 each side" && newPallof && newPallof.note !== it.note) { it.note = newPallof.note; fixed = true; }
