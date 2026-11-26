@@ -79,20 +79,28 @@ function judge(sets, item) {
 }
 
 // Progression target for a sets item. Returns null for non-progression lifts or no history.
+// program.progressAfter[id] = n means go up only after n sessions in a row hitting everything at the
+// same weight (small shoulder work stalls if it jumps too fast). Default 1.
 export function target(workouts, program, item) {
   const inc = program.progression && program.progression[item.id];
   if (!inc || item.t !== "sets") return null;
+  const after = Math.max(1, (program.progressAfter && program.progressAfter[item.id]) || 1);
   const results = [];
   for (const w of workouts) {
     const e = w.ex && w.ex[item.id];
     if (!e || !e.sets || !e.sets.some(s => s.r !== "" && s.r != null)) continue;
     const j = judge(e.sets, item);
     if (j) results.push(j);
-    if (results.length === 2) break;
+    if (results.length === Math.max(2, after)) break;
   }
   const last = results[0];
   if (!last) return null;
-  if (last.hit) return { w: last.top + inc, up: true, last: last.top, inc };
+  const streak = results.slice(0, after);
+  if (streak.length === after && streak.every(x => x.hit && x.top === last.top)) return { w: last.top + inc, up: true, last: last.top, inc };
+  if (last.hit) {   // hit everything, but not enough sessions in a row yet
+    let run = 0; while (run < results.length && results[run].hit && results[run].top === last.top) run++;
+    return { w: last.top, up: false, last: last.top, inc, waiting: after - run };
+  }
   const prev = results[1];
   const deload = prev && !prev.hit && prev.top === last.top ? Math.round(last.top * 0.9 / 5) * 5 : null;
   return { w: last.top, up: false, last: last.top, inc, deload };

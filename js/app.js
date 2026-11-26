@@ -28,7 +28,8 @@ let watchHidden = [];       // watch workouts Noah dismissed from History (by st
 const fmtTime = iso => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 const watchLine = x => [`${x.mins} min`, x.avgHr ? `avg HR ${x.avgHr}` : "", x.maxHr ? `max ${x.maxHr}` : "", x.cal ? `${x.cal} cal` : ""].filter(Boolean).join(" · ");
 
-const persistDraft = () => db.kvSet("draft", draft ? clone(draft) : undefined).catch(() => toast("Couldn't save. Storage may be full."));
+// draft.cur (which logged set is being fixed) is momentary, so it isn't saved.
+const persistDraft = () => db.kvSet("draft", draft ? (({ cur, ...rest }) => clone(rest))(draft) : undefined).catch(() => toast("Couldn't save. Storage may be full."));
 let progT;
 function saveProgram() {
   programEdited = true;
@@ -52,6 +53,7 @@ const IC = {
   trash: `<svg class="ic" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 3.5h12M5 3.5V2h4v1.5M2.5 3.5l.8 10.2c.1.7.6 1.3 1.3 1.3h4.8c.7 0 1.2-.6 1.3-1.3l.8-10.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   share: `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 12.5V3M6.5 6.2L10 2.7l3.5 3.5M6.5 9H5v8h10V9h-1.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   inbox: `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5V12M6.5 8.5L10 12l3.5-3.5M6.5 9H5v8h10V9h-1.5" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  check: `<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   arrowUp: `<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="currentColor"/><path d="M8 12V4.5M5 7.2L8 4.2l3 3" fill="none" stroke="var(--card)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   info: `<svg class="ic" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 8v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="5.2" r="1.1" fill="currentColor"/></svg>`,
   warn: `<svg class="ic" viewBox="0 0 16 15" aria-hidden="true"><path d="M6.6 1.2c.6-1.1 2.2-1.1 2.8 0l6.3 11.3c.6 1.1-.2 2.4-1.4 2.4H1.7C.5 14.9-.3 13.6.3 12.5z" fill="currentColor"/><path d="M8 5v4.2" stroke="var(--card)" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="11.8" r="1" fill="var(--card)"/></svg>`,
@@ -90,6 +92,8 @@ function render() {
   document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === tab ? "page" : "false"));
   if (!ready) { $("#app").innerHTML = `<div class="empty pad">${loadError ? esc(loadError) : "Loading…"}</div>`; return; }
   $("#app").innerHTML = { today: vToday, train: vTrain, history: vHistory, settings: vSettings }[tab]();
+  const strip = $("#stepstrip"), chip = strip && strip.querySelector(".stepchip.on");
+  if (chip) strip.scrollLeft = chip.offsetLeft - strip.clientWidth / 2 + chip.clientWidth / 2;
   const navTitle = { today: "Today", train: draft ? (dayOf(program, draft.day) || {}).name || "Workout" : "Train", history: "History", settings: "Settings" }[tab];
   $("#navTitle").textContent = navTitle;
   onScroll();
@@ -157,16 +161,7 @@ function vTrain() {
         return cell({ attrs: `data-act="start" data-day="${d.n}"`, lead: `<span class="daybadge ${d.n === nx ? "on" : ""}">${d.n}</span>`, title: esc(d.name), sub, detail: d.n === nx ? "Next" : "", cls: "daycell" });
       }).join(""))}</section>`;
   }
-  const d = dayOf(program, draft.day);
-  fillForm(draft, d);
-  const top = `<div class="lt-top"><span class="lt-sub">Day ${d.n} · <span class="tnum" id="elapsed">${fmtClock(Date.now() - draft.start)}</span></span><button class="link destructive" type="button" data-act="discard">Discard</button></div>`;
-  return `<section class="view">
-    ${largeTitle(esc(d.name), "", top)}
-    ${group("Rest Timer", `<div class="presets">${[30, 60, 90, 120, 180].map(s => `<button class="btn tinted" type="button" data-act="preset" data-s="${s}">${s < 120 ? s + "s" : (s / 60) + ":00"}</button>`).join("")}</div>`, { cls: "padded" })}
-    ${formBlocks(draft, d, "draft")}
-    ${group("Notes", `<textarea id="note" data-f="note" data-scope="draft" placeholder="How it felt, what to change next time">${esc(draft.note)}</textarea>`, { cls: "padded" })}
-    <button class="btn filled large" type="button" data-act="finish">Finish Workout</button>
-  </section>`;
+  return vFocus();
 }
 
 // Blocks + items for a session form. scope "draft" = live session, "edit" = a saved session.
@@ -326,7 +321,7 @@ function vSettings() {
 
     ${group("Program", `${seg(program.days.map(x => [x.n, "Day " + x.n]), d.n, "progday")}
       <label class="field-row"><span>Day name</span><input data-f="prog" data-k="dayname" value="${esc(d.name)}"></label>`,
-      { cls: "padded", right: programEdited ? `<button class="link" type="button" data-act="resetprog">Reset to Default</button>` : "", foot: `Changes save automatically. "+lb" is the weight added after you hit every set and rep, or finish every round (blank = no auto progression). Adding it to a rounds or checkbox exercise also turns on its weight box. "Rest" starts a timer in seconds each time you log a set's reps. "Weight" adds a pounds box to a rounds or checkbox exercise, like a carry or a rehab raise.` })}
+      { cls: "padded", right: programEdited ? `<button class="link" type="button" data-act="resetprog">Reset to Default</button>` : "", foot: `Changes save automatically. "+lb" is the weight added after you hit every set and rep, or finish every round (blank = no auto progression). "In a row" is how many sessions in a row you need to hit everything before it goes up (blank = 1). Adding it to a rounds or checkbox exercise also turns on its weight box. "Rest" starts a timer in seconds each time you log a set's reps. "Weight" adds a pounds box to a rounds or checkbox exercise, like a carry or a rehab raise.` })}
 
     ${d.blocks.map((b, bi) => group("", `
       <div class="eblock"><input class="eb-name" data-f="prog" data-b="${bi}" data-k="label" value="${esc(b.label)}" aria-label="Block name">
@@ -337,7 +332,7 @@ function vSettings() {
         <div class="ei-top"><input class="ei-name" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="n" value="${esc(it.n)}" aria-label="Exercise name">
           <span class="rbtns">${ib("pi", "up", bi, ii, IC.up, "Move up", bi === 0 && ii === 0)}${ib("pi", "down", bi, ii, IC.down, "Move down", bi === d.blocks.length - 1 && ii === b.items.length - 1)}${ib("pi", "del", bi, ii, IC.trash, "Remove exercise", false, "destructive")}</span></div>
         <div class="ei-fields"><span class="tag">${TYPE[it.t]}</span>
-          ${it.t === "sets" ? num1(bi, ii, "sets", "Sets", it.sets) + num1(bi, ii, "reps", "Reps", it.reps) + num1(bi, ii, "inc", "+lb", (program.progression || {})[it.id], "decimal") + num1(bi, ii, "rest", "Rest", it.rest || "") : ""}
+          ${it.t === "sets" ? num1(bi, ii, "sets", "Sets", it.sets) + num1(bi, ii, "reps", "Reps", it.reps) + num1(bi, ii, "inc", "+lb", (program.progression || {})[it.id], "decimal") + num1(bi, ii, "after", "In a row", (program.progressAfter || {})[it.id]) + num1(bi, ii, "rest", "Rest", it.rest || "") : ""}
           ${it.t === "rounds" ? num1(bi, ii, "rounds", "Rounds", it.rounds) : ""}
           ${it.t !== "sets" ? `<label class="mini sw"><span>Weight</span><input type="checkbox" role="switch" data-f="prog" data-b="${bi}" data-i="${ii}" data-k="wt" ${it.wt ? "checked" : ""} aria-label="Log a weight for this exercise"></label>` : ""}
           ${it.t !== "sets" ? num1(bi, ii, "winc", "+lb", it.wprog && it.wprog.inc, "decimal") : ""}</div>
@@ -349,6 +344,195 @@ function vSettings() {
     ${group("", `<button type="button" class="cell center" data-act="pb" data-op="add"><span class="cell-title link-c">Add Block</span></button>`, { foot: "Lift Tracker works offline. Your data stays on this phone." })}
   </section>`;
 }
+
+/* ---------- focus mode: the live workout, one step at a time ---------- */
+// A step is one sets/rounds exercise, or a run of checkbox items in the same block (warmups, rehab).
+// The last step is Finish (notes + summary). draft.step = current step; draft.pend[id] = the
+// weight/reps being dialed in for the current set before it's logged.
+function focusSteps(d) {
+  const steps = [];
+  d.blocks.forEach((b, bi) => {
+    let run = null;
+    for (const it of b.items) {
+      if (it.t === "check") { if (!run) steps.push(run = { kind: "checks", bi, items: [] }); run.items.push(it); }
+      else { run = null; steps.push({ kind: "item", bi, it }); }
+    }
+  });
+  steps.push({ kind: "finish" });
+  return steps;
+}
+const isDoneSet = s => s && s.r !== "" && s.r != null;
+function stepDone(st) {
+  if (st.kind === "checks") return st.items.every(it => (draft.ex[it.id] || {}).done);
+  if (st.kind !== "item") return false;
+  const e = draft.ex[st.it.id] || {};
+  if (st.it.t === "sets") return (e.sets || []).length > 0 && e.sets.every(isDoneSet);
+  return (e.rounds || []).length > 0 && e.rounds.every(Boolean);
+}
+const stepLabel = (st, d) => st.kind === "finish" ? "Finish" : st.kind === "checks" ? d.blocks[st.bi].label.split(" · ")[0] : st.it.n;
+
+// What to pre-fill and what to say: the progression target if there is one, else last time.
+function planFor(it) {
+  const tg = target(workouts, program, it), dp = dpTarget(workouts, it), prev = lastSets(workouts, it.id) || [];
+  if (tg) return { w: tg.w, r: it.reps, tg };
+  if (dp) return { w: dp.w, r: dp.r, dp };
+  const p = prev[prev.length - 1] || {};
+  return { w: num(p.w), r: it.reps || num(p.r), prev };
+}
+const isBW = it => !!(it.bw || (it.dp && it.dp.bw));   // bodyweight lifts log added weight, 0 = none
+const wStep = it => { const inc = (program.progression || {})[it.id] || (it.wprog && it.wprog.inc); return inc && inc < 5 ? inc : 5; };
+// Rest after a set: the exercise's own rest, or the block's plain "Rest" clock when the block is all lifting.
+function restFor(it, b) {
+  if (it.rest > 0) return it.rest;
+  const t = b.timer;
+  return t && !t.rep && t.ph.length === 1 && /rest/i.test(t.ph[0][0]) && b.items.every(x => x.t === "sets") ? t.ph[0][1] : 0;
+}
+// The set being worked on: the first one not logged yet, unless Noah tapped an earlier one to fix it.
+function curSet(it) {
+  const sets = draft.ex[it.id].sets, c = draft.cur && draft.cur[it.id];
+  return c != null && c < sets.length ? c : sets.findIndex(s => !isDoneSet(s));
+}
+function pendFor(it) {
+  const sets = draft.ex[it.id].sets, i = curSet(it);
+  draft.pend = draft.pend || {};
+  if (i < 0) return null;
+  const P = draft.pend[it.id];
+  if (P && P.i === i) return P;
+  // Carry forward what was just lifted this session; otherwise use the plan.
+  const s = sets[i], before = sets.slice(0, i).filter(isDoneSet).pop(), plan = planFor(it);
+  const w = isDoneSet(s) ? num(s.w) : before ? num(before.w) : plan.w;
+  const r = isDoneSet(s) ? num(s.r) : (before && plan.dp ? num(before.r) : plan.r);
+  return (draft.pend[it.id] = { i, w: w == null ? (isBW(it) ? 0 : "") : w, r: r == null ? "" : r });
+}
+
+function stepper(id, k, val, unit, label) {
+  return `<div class="stepper">
+    <button type="button" class="st-b" data-act="fstep" data-id="${esc(id)}" data-k="${k}" data-d="-1" aria-label="Less ${label}">−</button>
+    <label class="st-v"><input class="tnum" inputmode="${k === "w" ? "decimal" : "numeric"}" ${k === "r" ? `pattern="[0-9]*"` : ""} autocomplete="off" data-f="pend" data-id="${esc(id)}" data-k="${k}" value="${esc(val)}" placeholder="—" aria-label="${label}"><small>${unit}</small></label>
+    <button type="button" class="st-b" data-act="fstep" data-id="${esc(id)}" data-k="${k}" data-d="1" aria-label="More ${label}">+</button></div>`;
+}
+
+function howHTML(it) {
+  if (!it.how) return "";
+  const open = howOpen.has(it.id);
+  return `<button type="button" class="link howbtn" data-act="how" data-id="${esc(it.id)}" aria-expanded="${open}">${IC.info}${open ? "Hide" : "How to"}</button>${open ? `<p class="how">${esc(it.how)}</p>` : ""}`;
+}
+
+function focusSets(it, b) {
+  const e = draft.ex[it.id], sets = e.sets, i = curSet(it), plan = planFor(it), P = pendFor(it);
+  const W = v => num(v) ? `${lb(num(v))} lb` : isBW(it) ? "BW" : "—";
+  let hint = "";
+  if (plan.tg && plan.tg.up) hint = `<div class="target up">${IC.arrowUp}<span>Go up today: ${it.bw && !plan.tg.last ? `+${lb(plan.tg.w)} lb added` : `${lb(plan.tg.w)} lb`} (+${plan.tg.inc})</span></div>`;
+  else if (plan.tg && plan.tg.waiting) hint = `<div class="target"><span>Hit every rep ${plan.tg.waiting === 1 ? "once more" : plan.tg.waiting + " more times"} at ${lb(plan.tg.w)} lb, then +${plan.tg.inc}</span></div>`;
+  else if (plan.dp && plan.dp.up) hint = `<div class="target up">${IC.arrowUp}<span>${plan.dp.up === "weight" ? `Add weight: ${lb(plan.dp.w)} lb × ${plan.dp.r}` : `Add a rep: ${W(plan.dp.w)} × ${plan.dp.r}`}</span></div>`;
+  if (plan.tg && plan.tg.deload) hint += `<div class="target warn">${IC.warn}<span>Missed reps at ${lb(plan.tg.w)} twice in a row. Consider ${lb(plan.tg.deload)} lb.</span></div>`;
+  const row = (s, k) => isDoneSet(s)
+    ? `<button type="button" class="fset done" data-act="fset" data-id="${esc(it.id)}" data-i="${k}"><span class="fcheck" aria-hidden="true"></span><span>Set ${k + 1}</span><span class="tnum">${W(s.w)} × ${s.r}</span><span class="fedit">Edit</span></button>`
+    : `<div class="fset todo"><span class="fdot" aria-hidden="true"></span><span>Set ${k + 1}</span><span class="tnum muted">${W(P ? P.w : s.w)} × ${P ? P.r : it.reps || "—"}</span></div>`;
+  const rowsBefore = sets.map((s, k) => k < i || i < 0 ? row(s, k) : "").join(""), rowsAfter = i < 0 ? "" : sets.map((s, k) => k > i ? row(s, k) : "").join("");
+  let main;
+  if (i >= 0) {
+    const fixing = isDoneSet(sets[i]);
+    main = `<div class="fcur">
+      <div class="fcur-h"><span>Set ${i + 1} of ${sets.length}</span>${fixing ? `<span class="muted">Fixing a logged set</span>` : it.reps ? `<span class="muted">Goal ${it.reps} reps</span>` : ""}</div>
+      ${stepper(it.id, "w", P.w, isBW(it) ? "lb added" : "lb", "Weight")}
+      ${stepper(it.id, "r", P.r, "reps", "Reps")}
+      <button type="button" class="btn filled large" data-act="logset" data-id="${esc(it.id)}">${IC.check || "✓"} ${fixing ? "Save Set" : "Log Set"}</button>
+    </div>`;
+  } else {
+    // All sets logged: say what it means for next time (only the good news, per Noah).
+    const after = target([{ id: "now", date: today(), ts: Date.now(), ex: { [it.id]: { sets } } }, ...workouts], program, it);
+    const dpn = dpTarget([{ id: "now", ex: { [it.id]: { sets } } }, ...workouts], it);
+    const msg = after && after.up ? `Every rep hit. Next time: ${lb(after.w)} lb (+${after.inc}).`
+      : after && after.waiting ? `Every rep hit. Do it ${after.waiting === 1 ? "once more" : after.waiting + " more times"} at this weight, then go up.`
+      : dpn && dpn.up ? `Next time: ${dpn.up === "weight" ? `${lb(dpn.w)} lb × ${dpn.r}` : `${W(dpn.w)} × ${dpn.r}`}.` : "";
+    main = `<div class="fdone">${msg ? `<div class="target up">${IC.arrowUp}<span>${msg}</span></div>` : `<div class="muted">All ${sets.length} sets logged.</div>`}</div>`;
+  }
+  const rest = restFor(it, b);
+  // The "go up today" hint leads while there's work to do; once done, the result line replaces it.
+  return `${hint && i >= 0 ? `<div class="fhint">${hint}</div>` : ""}<div class="fsets">${rowsBefore}</div>${main}${rowsAfter ? `<div class="fsets">${rowsAfter}</div>` : ""}
+    <div class="frow"><button type="button" class="link" data-act="addset" data-scope="draft" data-id="${esc(it.id)}">${IC.plus}Add Set</button>${rest ? `<span class="muted small">${fmtClock(rest * 1000)} rest starts after each set</span>` : ""}</div>`;
+}
+
+function focusRounds(it) {
+  const e = draft.ex[it.id], r = e.rounds, done = r.filter(Boolean).length, next = r.findIndex(x => !x);
+  const lt = ladderTarget(workouts, it), wt = wTarget(workouts, it);
+  const goal = lt ? `<div class="fgoal"><span class="tnum">${lt.val}${lt.unit}</span><span class="muted">${lt.first ? "starting point" : "today"}${lt.maxed && lt.then ? ` · ${esc(lt.then)}` : ""}</span></div>` : "";
+  const hint = wt && wt.up ? `<div class="target up">${IC.arrowUp}<span>Go up today: ${lb(wt.w)} lb (+${it.wprog.inc})</span></div>` : lt && lt.up ? `<div class="target up">${IC.arrowUp}<span>Up ${it.ladder.step}${lt.unit} from last time</span></div>` : "";
+  const wbox = it.wt ? (() => { const v = e.w !== "" && e.w != null ? e.w : (wt ? wt.w : lastWeight(workouts, it.id)); return stepper(it.id, "rw", v, "lb", "Weight"); })() : "";
+  return `${goal}${hint}${wbox}
+    <div class="pips big">${r.map((on, k) => `<button type="button" class="pip ${on ? "on" : ""}" data-act="pip" data-scope="draft" data-id="${esc(it.id)}" data-i="${k}" aria-pressed="${on}" aria-label="Round ${k + 1}">${k + 1}</button>`).join("")}<button type="button" class="pip add" data-act="addpip" data-scope="draft" data-id="${esc(it.id)}" aria-label="Add round">+</button></div>
+    ${next >= 0 ? `<button type="button" class="btn filled large" data-act="fround" data-id="${esc(it.id)}">${IC.check || "✓"} Round ${next + 1} Done</button>` : `<div class="fdone"><div class="muted">All ${r.length} rounds done.</div></div>`}
+    <div class="muted small tnum">${done} of ${r.length} rounds</div>`;
+}
+
+function focusChecks(st) {
+  const ref = null;
+  return `<div class="list fchecks">${st.items.map(it => exHTML(it, draft, "draft", ref)).join("")}</div>
+    ${st.items.some(it => !(draft.ex[it.id] || {}).done) ? `<button type="button" class="btn tinted" data-act="fchecks">Mark All Done</button>` : ""}`;
+}
+
+function focusFinish(d, steps) {
+  const rows = steps.filter(s => s.kind !== "finish").map((st, k) => {
+    const done = stepDone(st), lbl = esc(stepLabel(st, d));
+    let det = "";
+    if (st.kind === "item" && st.it.t === "sets") { const s = draft.ex[st.it.id].sets; det = `${s.filter(isDoneSet).length}/${s.length} sets`; }
+    else if (st.kind === "item") { const r = draft.ex[st.it.id].rounds; det = `${r.filter(Boolean).length}/${r.length} rounds`; }
+    else det = `${st.items.filter(it => (draft.ex[it.id] || {}).done).length}/${st.items.length}`;
+    return `<button type="button" class="cell" data-act="fgoto" data-i="${k}"><span class="${done ? "fcheck" : "fdot"}" aria-hidden="true"></span><span class="cell-body"><span class="cell-title">${lbl}</span></span><span class="cell-detail tnum">${det}</span>${IC.chev}</button>`;
+  }).join("");
+  const left = steps.filter(s => s.kind !== "finish" && !stepDone(s)).length;
+  return `${group("Notes", `<textarea id="note" data-f="note" data-scope="draft" placeholder="How it felt, what to change next time">${esc(draft.note)}</textarea>`, { cls: "padded" })}
+    ${group("Today's Workout", rows, { foot: left ? `${left} not finished. That's fine; whatever you logged is saved.` : "Everything done. Nice work." })}
+    <button class="btn filled large" type="button" data-act="finish">Finish Workout</button>`;
+}
+
+function vFocus() {
+  const d = dayOf(program, draft.day);
+  fillForm(draft, d);
+  const steps = focusSteps(d);
+  draft.step = Math.max(0, Math.min(steps.length - 1, draft.step || 0));
+  const st = steps[draft.step], b = st.kind !== "finish" ? d.blocks[st.bi] : null;
+  const chips = steps.map((s, k) => `<button type="button" class="stepchip ${k === draft.step ? "on" : ""} ${stepDone(s) ? "done" : ""}" data-act="fgoto" data-i="${k}">${stepDone(s) ? "✓ " : ""}${esc(stepLabel(s, d))}</button>`).join("");
+  const top = `<div class="lt-top"><span class="lt-sub">Day ${d.n} · <span class="tnum" id="elapsed">${fmtClock(Date.now() - draft.start)}</span></span><button class="link destructive" type="button" data-act="discard">Discard</button></div>`;
+  let body;
+  if (st.kind === "finish") body = focusFinish(d, steps);
+  else {
+    const head = st.kind === "item" ? `<div class="fhead"><h2>${esc(st.it.n)}</h2>${st.it.note ? `<p class="muted">${esc(st.it.note)}</p>` : ""}${howHTML(st.it)}</div>` : "";
+    const inner = st.kind === "checks" ? focusChecks(st) : st.it.t === "sets" ? focusSets(st.it, b) : focusRounds(st.it);
+    const timer = b.timer ? `<button class="link" type="button" data-act="btimer" data-b="${st.bi}">${IC.play}${esc(b.timer.label)}</button>` : "";
+    body = `<section class="group"><div class="gh"><span>${esc(b.label)}</span>${timer}</div>
+      <div class="fcard" id="fcard">${head}${inner}</div>${b.about ? `<p class="gf">${esc(b.about)}</p>` : ""}</section>`;
+  }
+  const nextLbl = draft.step < steps.length - 1 ? esc(stepLabel(steps[draft.step + 1], d)) : "";
+  return `<section class="view focus">
+    ${largeTitle(esc(d.name), "", top)}
+    <div class="stepstrip" id="stepstrip">${chips}</div>
+    ${body}
+    <div class="fnav">
+      <button type="button" class="btn tinted" data-act="fprev" ${draft.step === 0 ? "disabled" : ""}>‹ Back</button>
+      ${nextLbl ? `<button type="button" class="btn ${stepDone(st) ? "filled" : "tinted"} grow" data-act="fnext">Next: ${nextLbl} ›</button>` : ""}
+    </div>
+    ${group("Quick Rest", `<div class="presets">${[30, 60, 90, 120, 180].map(s => `<button class="btn tinted" type="button" data-act="preset" data-s="${s}">${s < 120 ? s + "s" : (s / 60) + ":00"}</button>`).join("")}</div>`, { cls: "padded" })}
+  </section>`;
+}
+
+function goStep(k) { draft.step = k; draft.cur = {}; persistDraft(); render(); window.scrollTo(0, 0); }
+
+// Swipe left/right on the exercise card to move between steps.
+let fswipe = null;
+document.addEventListener("pointerdown", e => {
+  if (!draft || tab !== "train" || !e.target.closest || !e.target.closest("#fcard") || e.target.closest("button,input,textarea,label")) return;
+  fswipe = { x: e.clientX, y: e.clientY };
+});
+document.addEventListener("pointerup", e => {
+  if (!fswipe) return;
+  const dx = e.clientX - fswipe.x, dy = e.clientY - fswipe.y; fswipe = null;
+  if (Math.abs(dx) < 70 || Math.abs(dy) > 50 || !draft) return;
+  const n = focusSteps(dayOf(program, draft.day)).length;
+  const k = Math.max(0, Math.min(n - 1, (draft.step || 0) + (dx < 0 ? 1 : -1)));
+  if (k !== draft.step) goStep(k);
+});
 
 /* ---------- recovery (spec vitals.md V2–V6) ---------- */
 const HL = () => H.lists(V.data && V.data.days);
@@ -531,6 +715,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && detail && 
 
 /* ---------- actions ---------- */
 const formOf = scope => scope === "edit" ? editing : draft;
+const draftItem = id => itemsOf(dayOf(program, draft.day)).find(x => x.id === id);
 const touch = scope => { if (scope === "draft") persistDraft(); };
 const go = t => { tab = t; history.replaceState(null, "", "#" + t); render(); window.scrollTo(0, 0); };
 
@@ -542,6 +727,41 @@ async function act(a, el) {
       if (!draft) { draft = newDraft(program, +d.day); persistDraft(); }
       go("train"); break;
     case "check": { const f = formOf(d.scope); f.ex[d.id].done = !f.ex[d.id].done; touch(d.scope); render(); break; }
+    case "fgoto": goStep(+d.i); break;
+    case "fnext": goStep((draft.step || 0) + 1); break;
+    case "fprev": goStep(Math.max(0, (draft.step || 0) - 1)); break;
+    case "fstep": {
+      const it = draftItem(d.id), dir = +d.d;
+      if (d.k === "rw") { const e = draft.ex[it.id], wt = wTarget(workouts, it), base = num(e.w) ?? (wt ? wt.w : num(lastWeight(workouts, it.id))) ?? 0; e.w = String(Math.max(0, base + dir * wStep(it))); }
+      else { const P = pendFor(it), step = d.k === "w" ? wStep(it) : 1; P[d.k] = Math.max(0, Math.round(((num(P[d.k]) || 0) + dir * step) * 10) / 10); }
+      persistDraft(); render(); break;
+    }
+    case "logset": {
+      const it = draftItem(d.id), e = draft.ex[it.id], i = curSet(it), P = pendFor(it);
+      const r = num(P.r), w = num(P.w);
+      if (r == null) { toast("Enter your reps"); break; }
+      const fixing = isDoneSet(e.sets[i]);
+      e.sets[i] = { w: w == null || (w === 0 && isBW(it)) ? "" : String(w), r: String(Math.round(r)) };
+      if (draft.cur) delete draft.cur[it.id];
+      delete draft.pend[it.id];
+      persistDraft();
+      const b = dayOf(program, draft.day).blocks.find(x => x.items.includes(it)), rest = restFor(it, b);
+      const more = e.sets.some(x => !isDoneSet(x)) || b.items.slice(b.items.indexOf(it) + 1).some(x => x.t === "sets");
+      if (rest && !fixing && more) startTimer(`Rest · ${it.n}`, [["Rest", rest]]);
+      render(); break;
+    }
+    case "fset": draft.cur = draft.cur || {}; draft.cur[d.id] = +d.i; if (draft.pend) delete draft.pend[d.id]; render(); break;
+    case "fround": {
+      const it = draftItem(d.id), e = draft.ex[it.id], k = e.rounds.findIndex(x => !x);
+      if (k >= 0) e.rounds[k] = true;
+      if (it.wt && (e.w === "" || e.w == null)) { const wt = wTarget(workouts, it), v = wt ? wt.w : num(lastWeight(workouts, it.id)); if (v != null) e.w = String(v); }
+      persistDraft(); render(); break;
+    }
+    case "fchecks": {
+      const st = focusSteps(dayOf(program, draft.day))[draft.step || 0];
+      if (st && st.items) st.items.forEach(it => { draft.ex[it.id].done = true; });
+      persistDraft(); render(); break;
+    }
     case "pip": { const r = formOf(d.scope).ex[d.id].rounds; r[+d.i] = !r[+d.i]; touch(d.scope); render(); break; }
     case "addpip": formOf(d.scope).ex[d.id].rounds.push(false); touch(d.scope); render(); break;
     case "addset": { const s = formOf(d.scope).ex[d.id].sets, l = s[s.length - 1] || { w: "", r: "" }; s.push({ w: l.w, r: "" }); touch(d.scope); render(); break; }
@@ -685,6 +905,11 @@ document.addEventListener("input", e => {
   if (!f) return;
   if (f === "set") { const form = formOf(el.dataset.scope); form.ex[el.dataset.id].sets[+el.dataset.i][el.dataset.k] = el.value; touch(el.dataset.scope); }
   else if (f === "note") { formOf(el.dataset.scope).note = el.value; touch(el.dataset.scope); }
+  else if (f === "pend") {
+    const it = draftItem(el.dataset.id);
+    if (el.dataset.k === "rw") draft.ex[it.id].w = el.value; else pendFor(it)[el.dataset.k] = el.value;
+    persistDraft();
+  }
   else if (f === "rw") { formOf(el.dataset.scope).ex[el.dataset.id].w = el.value; touch(el.dataset.scope); }
   else if (f === "edate") { if (el.value) editing.date = el.value; }
   else if (f === "emins") editing.mins = el.value;
@@ -695,6 +920,7 @@ document.addEventListener("input", e => {
     else {
       const it = day.blocks[+el.dataset.b].items[+el.dataset.i];
       if (k === "n" || k === "note" || k === "how") it[k] = el.value;
+      else if (k === "after") { program.progressAfter = program.progressAfter || {}; const v = parseInt(el.value, 10); if (v > 1) program.progressAfter[it.id] = v; else delete program.progressAfter[it.id]; }
       else if (k === "inc") { program.progression = program.progression || {}; const v = num(el.value); if (v > 0) program.progression[it.id] = v; else delete program.progression[it.id]; }
       else if (k === "rest") { const v = parseInt(el.value, 10); it.rest = v > 0 ? v : 0; }
       else if (k === "winc") { const v = num(el.value); if (v > 0) { it.wprog = { inc: v }; if (!it.wt) { it.wt = true; const sw = el.closest(".ei-fields") && el.closest(".ei-fields").querySelector('[data-k="wt"]'); if (sw) sw.checked = true; } } else it.wprog = null; }
@@ -760,6 +986,9 @@ function mergeDefaults(prog, base, next) {
   const bp = base.progression || {}, np = next.progression || {};
   prog.progression = prog.progression || {};
   for (const id of Object.keys(np)) if (prog.progression[id] === bp[id] && np[id] !== bp[id]) { prog.progression[id] = np[id]; changed = true; }
+  const ba = base.progressAfter || {}, na = next.progressAfter || {};
+  prog.progressAfter = prog.progressAfter || {};
+  for (const id of Object.keys(na)) if (prog.progressAfter[id] === ba[id] && na[id] !== ba[id]) { prog.progressAfter[id] = na[id]; changed = true; }
   return changed;
 }
 

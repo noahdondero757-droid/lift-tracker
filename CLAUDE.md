@@ -31,7 +31,9 @@ program.days[] = { n, name, blocks[] }
 block = { label, about?, timer?: { label, ph: [[phaseLabel, seconds], ...], rep? }, items[] }  // about: why the block/timer, shown under it
 item  = { id, n (name), t: "sets"|"rounds"|"check", sets?, reps?, rounds?, note?, rest?, wt?, how? }  // how: "How to" text
 // rest: seconds, auto-starts after each logged set. wt: rounds/check item also logs a weight (carries, rehab)
-program.progression = { squat: 10, trapbar: 10, bench: 5 }   // lb added when all sets×reps hit
+program.progression = { squat: 10, trapbar: 10, bench: 5, ... }   // lb added when all sets×reps hit
+program.progressAfter = { facepull: 2, ... }   // sessions in a row hitting everything before going up (default 1)
+// Live workouts run in focus mode (vFocus in js/app.js): one step per exercise; draft.step, draft.pend.
 
 workout = { id, date "YYYY-MM-DD", day 1-4, mins, note,
             ex: { [itemId]: {sets:[{w,r}]} | {rounds, of, w?} | {done, w?} } }

@@ -12,7 +12,8 @@
     "pullup": 5,
     "cablerow": 5,
     "pullover": 5,
-    "reardelt": 2.5
+    "reardelt": 2.5,
+    "facepull": 2.5
   },
   "days": [
     {
@@ -681,5 +682,10 @@
         }
       ]
     }
-  ]
+  ],
+  "progressAfter": {
+    "facepull": 2,
+    "latraise": 2,
+    "reardelt": 2
+  }
 }
