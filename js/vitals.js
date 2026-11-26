@@ -30,18 +30,22 @@ export async function refreshVitals() {
   if (!V.link) return;
   V.lastTry = Date.now();
   V.state = "loading"; onChange();
+  // Give up after 10 s so weak gym signal falls back to the last saved data instead of hanging.
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 10000);
   try {
-    const r = await fetch(V.link, { cache: "no-store" });
+    const r = await fetch(V.link, { cache: "no-store", signal: ctl.signal });
     const j = await r.json();
     if (j && j.error) { V.state = "bad"; }
     else if (j && j.days) {
       V.data = j; V.fetchedAt = Date.now(); V.state = "ok";
       await db.kvSet("vitals", { data: j, at: V.fetchedAt });
     } else V.state = "blocked";
-  } catch {
-    // Online but the request failed: usually Google sent a sign-in page (deployment not shared with "Anyone").
-    V.state = navigator.onLine === false ? "offline" : "blocked";
+  } catch (e) {
+    // Timed out or no connection → offline. Online but refused: usually Google sent a sign-in page
+    // (deployment not shared with "Anyone").
+    V.state = navigator.onLine === false || ctl.signal.aborted ? "offline" : "blocked";
   }
+  clearTimeout(timer);
   onChange();
 }
 
